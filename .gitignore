@@ -3,6 +3,7 @@
 *vcxproj
 *vcxproj.user
 *.db
+*.opendb
 
 build*/
 

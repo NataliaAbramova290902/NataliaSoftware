@@ -32,6 +32,7 @@
 #include <ctime>
 #include "Timer.h"
 
+
 using namespace concurrency;
 using namespace std;
 
@@ -46,14 +47,16 @@ struct Point
 	double z;
 };
 
-struct IntersectionPoint
+
+struct TwoPoints
 {
-	Point p1;
-	Point p2;
-	//double x;
-	//double y;
-	//double z;
-	//int Scope;
+	Point onePoint;
+	Point twoPoint;
+};
+
+struct IntersectionPoints
+{
+	vector<TwoPoints> twoPoints;
 };
 
 struct Line
@@ -63,27 +66,31 @@ struct Line
 		//vector<IntersectionPoint> IntersectionPoints;
 };
 
-void SimpleSqrtGPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeCenter, vector<IntersectionPoint> NeedIntersections)
+void SimpleSqrtGPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeCenter, vector< vector<TwoPoints>> NeedIntersections)
 {
 	int N = Lines.size();
 	array_view<const Line, 1> L(N, Lines);
 	array_view<const Point, 1> SC(ScopeCenter.size(), ScopeCenter);
-	array_view<IntersectionPoint, 1> NI(ScopeCenter.size(), NeedIntersections);
-	NI.discard_data();
 
+	array_view<TwoPoints, 2> NI(ScopeCenter.size(), N, NeedIntersections);
+	NI.discard_data();
 	
-	parallel_for_each(NI.extent, [=](index<1> idx) restrict(amp)
+	parallel_for_each(NI.extent, [=](index<2> idx) restrict(amp)
 		//parallel_for(size_t(0), Lines.size(), [&](int idx)
 		//for (int idx = 0; idx < Lines.size(); idx++)
 	{
 
-
+        //IntersectionPoints IP;
+		
+		
+		
+		
 		for (int j = 0; j < N; j++)
 		{
 
 			double A = (L(j).twoPoint.x - L(j).onePoint.x) * (L(j).twoPoint.x - L(j).onePoint.x) + (L(j).twoPoint.y - L(j).onePoint.y) * (L(j).twoPoint.y - L(j).onePoint.y) + (L(j).twoPoint.z - L(j).onePoint.z) * (L(j).twoPoint.z - L(j).onePoint.z);
 			double B = 2 * ((L(j).twoPoint.x - L(j).onePoint.x) * (L(j).onePoint.x - SC(idx).x) + (L(j).twoPoint.y - L(idx).onePoint.y) * (L(j).onePoint.y - SC(idx).y) + (L(j).twoPoint.z - L(j).onePoint.z) * (L(j).onePoint.z - SC(idx).z));
-			double C = (L(j).onePoint.x - SC(idx).x) * (L(j).onePoint.x - SC(idx).x) + (L(j).onePoint.y - SC(idx).y) * (L(j).onePoint.y - SC(idx).y) + (L(j).onePoint.z - SC(idx).z) *(L(j).onePoint.z - SC(idx).z) - (R * R);
+			double C = (L(j).onePoint.x - SC(idx).x) * (L(j).onePoint.x - SC(idx.x) + (L(j).onePoint.y - SC(idx).y) * (L(j).onePoint.y - SC(idx).y) + (L(j).onePoint.z - SC(idx).z) *(L(j).onePoint.z - SC(idx).z) - (R * R);
 
 			double D = (B * B) - (4 * A * C);
 
@@ -103,21 +110,24 @@ void SimpleSqrtGPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeC
 				double y2 = L(j).onePoint.y + t2 * (L(j).twoPoint.y - L(j).onePoint.y);
 				double z2 = L(j).onePoint.z + t2 * (L(j).twoPoint.z - L(j).onePoint.z);
 
+				Point a1; 
+				a1.x = x1;
+				a1.y = y1;
+				a1.z = z1;
+				//IP.Points.push_back(std::move(a1));
 
-				IntersectionPoint IP;
-				IP.p1.x = x1;
-				IP.p1.y = y1;
-				IP.p1.z = z1;
-				//IP1.Scope = j;
+				
+				NI[idx].onePoint
 
 
-				//IntersectionPoint IP2;
-				IP.p2.x = x2;
-				IP.p2.y = y2;
-				IP.p2.z = z2;
-				//IP2.Scope = j;
+				Point a2;
+				a2.x = x2;
+				a2.y = y2;
+				a2.z = z2;
+				//IP.Points = x1;
 
-				NI[idx] = IP;
+				//IP.Points.push_back(std::move(a2));
+				//NI[idx] = IP;
 				//NI.push_back(IP2);
 			}
 
@@ -131,54 +141,28 @@ void SimpleSqrtGPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeC
 					double x1 = L(j).onePoint.x + t1 * (L(j).twoPoint.x - L(j).onePoint.x);
 					double y1 = L(j).onePoint.y + t1 * (L(j).twoPoint.y - L(j).onePoint.y);
 					double z1 = L(j).onePoint.z + t1 * (L(j).twoPoint.z - L(j).onePoint.z);
-					IntersectionPoint IP;
-					IP.p1.x = x1;
-					IP.p1.y = y1;
-					IP.p1.z = z1;
-
-					IP.p2.x = NULL;
-					IP.p2.y = NULL;
-					IP.p2.z = NULL;
-
-					//IP1.Scope = j;
-					NI[idx] = IP;
-					//NI.push_back(IP1);
-				}
-				else
-				{
-					IntersectionPoint IP;
-
-					IP.p1.x = NULL;
-					IP.p1.y = NULL;
-					IP.p1.z = NULL;
-
-					IP.p2.x = NULL;
-					IP.p2.y = NULL;
-					IP.p2.z = NULL;
+					
+					Point a1;
+					a1.x = x1;
+					a1.y = y1;
+					a1.z = z1;
+					//IP.Points.data.push_back(a1);
 				}
 			}
 		}
+		//NI[idx] = IP;
    });
-
-	/*for (int idx = 0; idx < Lines.size(); idx++)
-	{
-		for (int i = idx * NeedIntersections.size(); i < idx * (NeedIntersections.size()-1) + NeedIntersections.size(); i++)
-		{
-			Lines[idx].IntersectionPoints.push_back(NeedIntersections.at(i));
-		}
-	}*/
-
-	//NeedIntersections.clear();
+	NI.synchronize();
 }
 
 
 void CPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeCenter)
 {
-	vector<IntersectionPoint> NeedIntersections;
+	vector<IntersectionPoints> NeedIntersections;
 
 	for (int j = 0; j < ScopeCenter.size(); j++) 
 	{
-
+		IntersectionPoints IP;
 		for (int i = 0; i < Lines.size(); i++) 
 		{
 
@@ -204,19 +188,19 @@ void CPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeCenter)
 				double z2 = Lines.at(i).onePoint.z + t2 * (Lines.at(i).twoPoint.z - Lines.at(i).onePoint.z);
 
 
-				IntersectionPoint IP;
-				IP.p1.x = x1;
-				IP.p1.y = y1;
-				IP.p1.z = z1;
-				//IP.Scope = j;
+				Point a1;
+				a1.x = x1;
+				a1.y = y1;
+				a1.z = z1;
+				IP.Points.push_back(std::move(a1));
 
-				IP.p2.x = x2;
-				IP.p2.y = y2;
-				IP.p2.z = z2;
-				//IP.Scope = j;
+				Point a2;
+				a2.x = x2;
+				a2.y = y2;
+				a2.z = z2;
+				IP.Points.push_back(std::move(a2));
 
 				NeedIntersections.push_back(IP);
-				//NeedIntersections.push_back(IP2);
 			}
 
 			else
@@ -228,7 +212,7 @@ void CPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeCenter)
 					double x1 = Lines.at(i).onePoint.x + t1 * (Lines.at(i).twoPoint.x - Lines.at(i).onePoint.x);
 					double y1 = Lines.at(i).onePoint.y + t1 * (Lines.at(i).twoPoint.y - Lines.at(i).onePoint.y);
 					double z1 = Lines.at(i).onePoint.z + t1 * (Lines.at(i).twoPoint.z - Lines.at(i).onePoint.z);
-					IntersectionPoint IP;
+					IntersectionPoints IP;
 					IP.p1.x = x1;
 					IP.p1.y = y1;
 					IP.p1.z = z1;
@@ -241,7 +225,7 @@ void CPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeCenter)
 				}
 				else
 				{
-					IntersectionPoint IP;
+					IntersectionPoints IP;
 					IP.p1.x = NULL;
 					IP.p1.y = NULL;
 					IP.p1.z = NULL;
@@ -291,10 +275,10 @@ int main()
 	cout << "Введите радиус" << endl;
 	cin >> R;
 	
-	ifstream F;
-	F.open("S.txt", ios::in); // окрываем файл для чтения
-	if (F)
-	{
+	//ifstream F;
+	//F.open("S.txt", ios::in); // окрываем файл для чтения
+	//if (F)
+	//{
 		//F >> NumberOfScope; //колличество сфер
 		cout << "Колличество сфер " ;
 		cin >> NumberOfScope;
@@ -312,7 +296,7 @@ int main()
 			//cout << ScopeCenter[ScopeCenter.size() - 1].x << "\t" << ScopeCenter[ScopeCenter.size() - 1].y << "\t" << ScopeCenter[ScopeCenter.size() - 1].z << "\t";
 			//cout << "\n";
 
-		}
+		//}
 		//cout << ScopeCenter.size() << endl;
 	}
 	int NN = ScopeCenter.size();

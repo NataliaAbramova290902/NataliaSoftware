@@ -1,7 +1,7 @@
 *.user
 */.vs/
-*.vcxproj
-*.vcxproj.user
+*vcxproj
+*vcxproj.user
 *.db
 
 build*/

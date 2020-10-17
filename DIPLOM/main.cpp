@@ -42,31 +42,27 @@ using namespace std;
 
 struct Point 
 {
-	double x;
-	double y;
-	double z;
+	double x = 0;
+	double y = 0;
+	double z = 0;
+	bool valide = true;   //TODO: Флаг валидности точки, типа в теории мы все равно должны создать экземпляр - прототип точки, чтоб отроботал расчет
 };
 
-
+//TODO: Структура для храенения точек пересечения, типа их не может быть больше двух
 struct TwoPoints
 {
 	Point onePoint;
-	Point twoPoint;
+	Point twoPoint;	
 };
 
-struct IntersectionPoints
-{
-	vector<TwoPoints> twoPoints;
-};
 
 struct Line
 {
 		Point onePoint;
 		Point twoPoint;
-		//vector<IntersectionPoint> IntersectionPoints;
 };
 
-void SimpleSqrtGPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeCenter, vector< vector<TwoPoints>> NeedIntersections)
+void SimpleSqrtGPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeCenter, vector<TwoPoints>& NeedIntersections)
 {
 	int N = Lines.size();
 	array_view<const Line, 1> L(N, Lines);
@@ -75,22 +71,13 @@ void SimpleSqrtGPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeC
 	array_view<TwoPoints, 2> NI(ScopeCenter.size(), N, NeedIntersections);
 	NI.discard_data();
 	
+
 	parallel_for_each(NI.extent, [=](index<2> idx) restrict(amp)
-		//parallel_for(size_t(0), Lines.size(), [&](int idx)
-		//for (int idx = 0; idx < Lines.size(); idx++)
 	{
 
-        //IntersectionPoints IP;
-		
-		
-		
-		
-		for (int j = 0; j < N; j++)
-		{
-
-			double A = (L(j).twoPoint.x - L(j).onePoint.x) * (L(j).twoPoint.x - L(j).onePoint.x) + (L(j).twoPoint.y - L(j).onePoint.y) * (L(j).twoPoint.y - L(j).onePoint.y) + (L(j).twoPoint.z - L(j).onePoint.z) * (L(j).twoPoint.z - L(j).onePoint.z);
-			double B = 2 * ((L(j).twoPoint.x - L(j).onePoint.x) * (L(j).onePoint.x - SC(idx).x) + (L(j).twoPoint.y - L(idx).onePoint.y) * (L(j).onePoint.y - SC(idx).y) + (L(j).twoPoint.z - L(j).onePoint.z) * (L(j).onePoint.z - SC(idx).z));
-			double C = (L(j).onePoint.x - SC(idx).x) * (L(j).onePoint.x - SC(idx.x) + (L(j).onePoint.y - SC(idx).y) * (L(j).onePoint.y - SC(idx).y) + (L(j).onePoint.z - SC(idx).z) *(L(j).onePoint.z - SC(idx).z) - (R * R);
+			double A = (L(idx[1]).twoPoint.x - L(idx[1]).onePoint.x) * (L(idx[1]).twoPoint.x - L(idx[1]).onePoint.x) + (L(idx[1]).twoPoint.y - L(idx[1]).onePoint.y) * (L(idx[1]).twoPoint.y - L(idx[1]).onePoint.y) + (L(idx[1]).twoPoint.z - L(idx[1]).onePoint.z) * (L(idx[1]).twoPoint.z - L(idx[1]).onePoint.z);
+			double B = 2 * ((L(idx[1]).twoPoint.x - L(idx[1]).onePoint.x) * (L(idx[1]).onePoint.x - SC(idx[0]).x) + (L(idx[1]).twoPoint.y - L(idx[0]).onePoint.y) * (L(idx[1]).onePoint.y - SC(idx[0]).y) + (L(idx[1]).twoPoint.z - L(idx[1]).onePoint.z) * (L(idx[1]).onePoint.z - SC(idx[0]).z));
+			double C = (L(idx[1]).onePoint.x - SC(idx[0]).x) * (L(idx[1]).onePoint.x - SC(idx[0]).x) + (L(idx[1]).onePoint.y - SC(idx[0]).y) * (L(idx[1]).onePoint.y - SC(idx[0]).y) + (L(idx[1]).onePoint.z - SC(idx[0]).z) *(L(idx[1]).onePoint.z - SC(idx[0]).z) - (R * R);
 
 			double D = (B * B) - (4 * A * C);
 
@@ -101,68 +88,61 @@ void SimpleSqrtGPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeC
 				double t2 = (-B - SQ) / (2 * A);
 
 				//Первая точка пересечения
-				double x1 = L(j).onePoint.x + t1 * (L(j).twoPoint.x - L(j).onePoint.x);
-				double y1 = L(j).onePoint.y + t1 * (L(j).twoPoint.y - L(j).onePoint.y);
-				double z1 = L(j).onePoint.z + t1 * (L(j).twoPoint.z - L(j).onePoint.z);
+				double x1 = L(idx[1]).onePoint.x + t1 * (L(idx[1]).twoPoint.x - L(idx[1]).onePoint.x);
+				double y1 = L(idx[1]).onePoint.y + t1 * (L(idx[1]).twoPoint.y - L(idx[1]).onePoint.y);
+				double z1 = L(idx[1]).onePoint.z + t1 * (L(idx[1]).twoPoint.z - L(idx[1]).onePoint.z);
 
 				//Вторая точка пересечения
-				double x2 = L(j).onePoint.x + t2 * (L(j).twoPoint.x - L(j).onePoint.x);
-				double y2 = L(j).onePoint.y + t2 * (L(j).twoPoint.y - L(j).onePoint.y);
-				double z2 = L(j).onePoint.z + t2 * (L(j).twoPoint.z - L(j).onePoint.z);
+				double x2 = L(idx[1]).onePoint.x + t2 * (L(idx[1]).twoPoint.x - L(idx[1]).onePoint.x);
+				double y2 = L(idx[1]).onePoint.y + t2 * (L(idx[1]).twoPoint.y - L(idx[1]).onePoint.y);
+				double z2 = L(idx[1]).onePoint.z + t2 * (L(idx[1]).twoPoint.z - L(idx[1]).onePoint.z);
 
-				Point a1; 
-				a1.x = x1;
-				a1.y = y1;
-				a1.z = z1;
-				//IP.Points.push_back(std::move(a1));
+				NI[idx].onePoint.x = x1;
+				NI[idx].onePoint.y = y1;
+				NI[idx].onePoint.z = z1;
+				NI[idx].onePoint.valide = true;
 
-				
-				NI[idx].onePoint
-
-
-				Point a2;
-				a2.x = x2;
-				a2.y = y2;
-				a2.z = z2;
-				//IP.Points = x1;
-
-				//IP.Points.push_back(std::move(a2));
-				//NI[idx] = IP;
-				//NI.push_back(IP2);
+				NI[idx].twoPoint.x = x2;
+				NI[idx].twoPoint.y = y2;
+				NI[idx].twoPoint.z = z2;
+				NI[idx].twoPoint.valide = true;
 			}
 
+			else if (D == 0)
+			{
+				double SQ = fast_math::sqrt(D);
+				double t1 = (-B + SQ) / (2 * A);
+				//Первая точка пересечения
+				double x1 = L(idx[1]).onePoint.x + t1 * (L(idx[1]).twoPoint.x - L(idx[1]).onePoint.x);
+				double y1 = L(idx[1]).onePoint.y + t1 * (L(idx[1]).twoPoint.y - L(idx[1]).onePoint.y);
+				double z1 = L(idx[1]).onePoint.z + t1 * (L(idx[1]).twoPoint.z - L(idx[1]).onePoint.z);
+					
+				NI[idx].onePoint.x = x1;
+				NI[idx].onePoint.y = y1;
+				NI[idx].onePoint.z = z1;
+				NI[idx].onePoint.valide = true;
+
+				NI[idx].twoPoint.valide = false;
+
+			}
 			else
 			{
-				if (D == 0)
-				{
-					double SQ = fast_math::sqrt(D);
-					double t1 = (-B + SQ) / (2 * A);
-					//Первая точка пересечения
-					double x1 = L(j).onePoint.x + t1 * (L(j).twoPoint.x - L(j).onePoint.x);
-					double y1 = L(j).onePoint.y + t1 * (L(j).twoPoint.y - L(j).onePoint.y);
-					double z1 = L(j).onePoint.z + t1 * (L(j).twoPoint.z - L(j).onePoint.z);
-					
-					Point a1;
-					a1.x = x1;
-					a1.y = y1;
-					a1.z = z1;
-					//IP.Points.data.push_back(a1);
-				}
+				NI[idx].onePoint.valide = false;
+				NI[idx].twoPoint.valide = false;
 			}
-		}
-		//NI[idx] = IP;
-   });
+			
+		
+    });
 	NI.synchronize();
+	
 }
 
 
-void CPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeCenter)
+void CPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeCenter, vector<TwoPoints>& NeedIntersections)
 {
-	vector<IntersectionPoints> NeedIntersections;
 
 	for (int j = 0; j < ScopeCenter.size(); j++) 
 	{
-		IntersectionPoints IP;
 		for (int i = 0; i < Lines.size(); i++) 
 		{
 
@@ -177,12 +157,12 @@ void CPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeCenter)
 				double t1 = (-B + SQ) / (2 * A);
 				double t2 = (-B - SQ) / (2 * A);
 
-				//Первая точка пересечения
+				//TODO:Первая точка пересечения
 				double x1 = Lines.at(i).onePoint.x + t1 * (Lines.at(i).twoPoint.x - Lines.at(i).onePoint.x);
 				double y1 = Lines.at(i).onePoint.y + t1 * (Lines.at(i).twoPoint.y - Lines.at(i).onePoint.y);
 				double z1 = Lines.at(i).onePoint.z + t1 * (Lines.at(i).twoPoint.z - Lines.at(i).onePoint.z);
 
-				//Вторая точка пересечения
+				//TODO:Вторая точка пересечения
 				double x2 = Lines.at(i).onePoint.x + t2 * (Lines.at(i).twoPoint.x - Lines.at(i).onePoint.x);
 				double y2 = Lines.at(i).onePoint.y + t2 * (Lines.at(i).twoPoint.y - Lines.at(i).onePoint.y);
 				double z2 = Lines.at(i).onePoint.z + t2 * (Lines.at(i).twoPoint.z - Lines.at(i).onePoint.z);
@@ -192,59 +172,42 @@ void CPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeCenter)
 				a1.x = x1;
 				a1.y = y1;
 				a1.z = z1;
-				IP.Points.push_back(std::move(a1));
+				
+				NeedIntersections[j * Lines.size() + i].onePoint = a1;
 
 				Point a2;
 				a2.x = x2;
 				a2.y = y2;
 				a2.z = z2;
-				IP.Points.push_back(std::move(a2));
-
-				NeedIntersections.push_back(IP);
+				NeedIntersections[j * Lines.size() + i].onePoint = a2;
 			}
 
+			else if (D == 0)
+			{
+				double t1 = (-B + SQ) / (2 * A);
+				//TODO: Первая точка пересечения
+				double x1 = Lines.at(i).onePoint.x + t1 * (Lines.at(i).twoPoint.x - Lines.at(i).onePoint.x);
+				double y1 = Lines.at(i).onePoint.y + t1 * (Lines.at(i).twoPoint.y - Lines.at(i).onePoint.y);
+				double z1 = Lines.at(i).onePoint.z + t1 * (Lines.at(i).twoPoint.z - Lines.at(i).onePoint.z);
+				
+				Point a1;
+				a1.x = x1;
+				a1.y = y1;
+				a1.z = z1;
+				a1.valide = true;
+
+				NeedIntersections[j * Lines.size() + i].onePoint = a1;
+
+				NeedIntersections[j * Lines.size() + i].twoPoint.valide = false;
+			
+			}
 			else
 			{
-				if (D == 0)
-				{
-					double t1 = (-B + SQ) / (2 * A);
-					//Первая точка пересечения
-					double x1 = Lines.at(i).onePoint.x + t1 * (Lines.at(i).twoPoint.x - Lines.at(i).onePoint.x);
-					double y1 = Lines.at(i).onePoint.y + t1 * (Lines.at(i).twoPoint.y - Lines.at(i).onePoint.y);
-					double z1 = Lines.at(i).onePoint.z + t1 * (Lines.at(i).twoPoint.z - Lines.at(i).onePoint.z);
-					IntersectionPoints IP;
-					IP.p1.x = x1;
-					IP.p1.y = y1;
-					IP.p1.z = z1;
-					//IP1.Scope = j;
-					IP.p2.x = NULL;
-					IP.p2.y = NULL;
-					IP.p2.z = NULL;
-
-					NeedIntersections.push_back(IP);
-				}
-				else
-				{
-					IntersectionPoints IP;
-					IP.p1.x = NULL;
-					IP.p1.y = NULL;
-					IP.p1.z = NULL;
-
-					IP.p2.x = NULL;
-					IP.p2.y = NULL;
-					IP.p2.z = NULL;
-
-					NeedIntersections.push_back(IP);
-				}
+				NeedIntersections[j * Lines.size() + i].onePoint.valide = false;
+				NeedIntersections[j * Lines.size() + i].twoPoint.valide = false;
 			}
+			
 		}
-
-		//for (int i = 0; i < NeedIntersections.size(); i++)
-		//{
-			//Lines[i].IntersectionPoints.push_back(NeedIntersections.at(i));
-		//}
-
-		//NeedIntersections.clear();
 
 	}
 };
@@ -257,12 +220,13 @@ int main()
 	int StepX;
 	int	StepY;
 	double R;
-	int NumberOfScope; //колличество сфер
-	//Point ScopeCenter[2]; //Центры сфер
+	int NumberOfScope; //TODO: колличество сфер
+
+
 	vector <Point> ScopeCenter;
 	accelerator defaultDevice(accelerator::default_accelerator);
 	accelerator_view defaultView = defaultDevice.default_view;
-	wcout << L" Using device : " << defaultDevice.get_description() << endl << endl; //Название использующейся видеокарты
+	wcout << L" Using device : " << defaultDevice.get_description() << endl << endl; //TODO: Название использующейся видеокарты
 	
 	cout << "Количество шагов по оси X" << endl;
 	cin >> StepX;
@@ -270,37 +234,32 @@ int main()
 	cout << "Количество шагов по оси Y" << endl;
 	cin >> StepY;
 	
-	const int ArraySize = StepX + StepY + 2;
+	const int ArraySize = StepX + StepY + 2; //TODO: Ну тут понятно почему +2, типа количестов линий равно количеству шагов + 1 с каждой стороны
 	
 	cout << "Введите радиус" << endl;
 	cin >> R;
 	
-	//ifstream F;
-	//F.open("S.txt", ios::in); // окрываем файл для чтения
-	//if (F)
-	//{
-		//F >> NumberOfScope; //колличество сфер
-		cout << "Колличество сфер " ;
-		cin >> NumberOfScope;
-		//cout << "Координаты центров сфер:\n" << endl;
-		for (int i = 0; i < NumberOfScope; i++)
-		{
-			//ScopeCenter(NumberOfScope); //Центры сфер
-			Point C;
+
+	cout << "Колличество сфер " ;
+	cin >> NumberOfScope;
+
+	for (int i = 0; i < NumberOfScope; i++)
+	{
+		//Центры сфер
+		Point C;
 			
-			C.x = 100;
-			C.y = 100;
-			C.z = 0;
+		C.x = 150;
+		C.y = 150;
+		C.z = 0;
 
-			ScopeCenter.push_back(C);  // добавляем введенные числа
-			//cout << ScopeCenter[ScopeCenter.size() - 1].x << "\t" << ScopeCenter[ScopeCenter.size() - 1].y << "\t" << ScopeCenter[ScopeCenter.size() - 1].z << "\t";
-			//cout << "\n";
-
-		//}
-		//cout << ScopeCenter.size() << endl;
+		ScopeCenter.push_back(C);  
 	}
+
+
 	int NN = ScopeCenter.size();
-	vector<IntersectionPoint> NeedIntersections(NN);
+
+	vector<TwoPoints> NeedIntersections(NN * ArraySize);
+
 	//Координаты угла левого нижнего
 	Point U;
 	Point U2;
@@ -335,6 +294,11 @@ int main()
 		Lines[i].twoPoint.z = U2.z; //координаты Z второй точки линии параллельных оси X
 	}
 
+
+
+	
+
+
 	/*cout << "Точки линий" << endl;
 	cout << "\n";
 	for (int i = 0; i < ArraySize; i++)
@@ -355,10 +319,17 @@ int main()
 	unsigned int search_time = end_time - start_time; // искомое время
 	cout << search_time << " ms." << endl;
 
+
+
+	NeedIntersections.clear();
+
+	NeedIntersections = vector<TwoPoints>(NN * ArraySize);
+
+
 	cout << "СPU" << endl;
 	unsigned int start_time2 = clock(); //начальное время
 
-	CPUCalc(Lines, R, ScopeCenter);
+	CPUCalc(Lines, R, ScopeCenter, NeedIntersections);
 
 	unsigned int end_time2 = clock(); // конечное время
 	unsigned int search_time2 = end_time2 - start_time2; // искомое время

@@ -84,8 +84,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(ProjectDir)\bin\$(ProjectName)\$(Configuration)\$(Platform)\</OutDir>
-    <IntDir>$(ProjectDir)\int\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
+    <OutDir>c:\build\Chapter4\bin\$(ProjectName)\$(Configuration)\$(Platform)\</OutDir>
+    <IntDir>c:\build\Chapter4\int\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>

@@ -74,9 +74,9 @@ void SimpleSqrtGPUCalc(std::vector<Line>& Lines, int StepX, int StepY, double R,
 	parallel_for_each(NI.extent, [=](index<2> idx) restrict(amp)
 	{
 
-			double A = (L(idx).x - L(idx).x) * (L(idx).x - L(idx).x) + (L(idx).y - L(idx).y) * (L(idx).y - L(idx).y) + ((-R - 0.1) - (R + 0.1)) * ((-R - 0.1) - (R + 0.1));
-			double B = 2 * ((L(idx).x - L(idx).x) * (L(idx).x - SC(idx[0]).x) + (L(idx).y - L(idx).y) * (L(idx).y - SC(idx[0]).y) + ((-R - 0.1) - (R + 0.1)) * ((R + 0.1) - SC(idx[0]).z));
-			double C = (L(idx).x - SC(idx[0]).x) * (L(idx).x - SC(idx[0]).x) + (L(idx).y - SC(idx[0]).y) * (L(idx).y - SC(idx[0]).y) + ((R + 0.1) - SC(idx[0]).z) *((R + 0.1) - SC(idx[0]).z) - (R * R);
+			double A = ((-R - 0.1) - (R + 0.1)) * ((-R - 0.1) - (R + 0.1));
+			double B = 2 * (((-R - 0.1) - (R + 0.1)) * ((R + 0.1) - SC(idx[0]).z));
+			double C = ((L(idx).x - SC(idx[0]).x) * (L(idx).x - SC(idx[0]).x)) + ((L(idx).y - SC(idx[0]).y) * (L(idx).y - SC(idx[0]).y)) + (((R + 0.1) - SC(idx[0]).z) *((R + 0.1) - SC(idx[0]).z)) - (R * R);
 
 			double D = (B * B) - (4 * A * C);
 
@@ -87,13 +87,13 @@ void SimpleSqrtGPUCalc(std::vector<Line>& Lines, int StepX, int StepY, double R,
 				double t2 = (-B - SQ) / (2 * A);
 
 				//Первая точка пересечения
-				double x1 = L(idx).x + t1 * (L(idx).x - L(idx).x);
-				double y1 = L(idx).y + t1 * (L(idx).y - L(idx).y);
+				double x1 = L(idx).x;
+				double y1 = L(idx).y;
 				double z1 = (R + 0.1) + t1 * ((-R - 0.1) - (R + 0.1));
 
 				//Вторая точка пересечения
-				double x2 = L(idx).x + t2 * (L(idx).x - L(idx).x);
-				double y2 = L(idx).y + t2 * (L(idx).y - L(idx).y);
+				double x2 = L(idx).x;
+				double y2 = L(idx).y;
 				double z2 = (R + 0.1) + t2 * ((-R - 0.1) - (R + 0.1));
 
 				NI[idx].onePoint.x = x1;
@@ -112,8 +112,8 @@ void SimpleSqrtGPUCalc(std::vector<Line>& Lines, int StepX, int StepY, double R,
 				double SQ = fast_math::sqrt(D);
 				double t1 = (-B + SQ) / (2 * A);
 				//Первая точка пересечения
-				double x1 = L(idx).x + t1 * (L(idx).x - L(idx).x);
-				double y1 = L(idx).y + t1 * (L(idx).y - L(idx).y);
+				double x1 = L(idx).x;
+				double y1 = L(idx).y;
 				double z1 = (R + 0.1) + t1 * ((-R - 0.1) - (R + 0.1));
 					
 				NI[idx].onePoint.x = x1;
@@ -145,9 +145,9 @@ void CPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeCenter, vec
 		for (int i = 0; i < Lines.size(); i++) 
 		{
 
-			double A = (Lines.at(i).x - Lines.at(i).x) * (Lines.at(i).x - Lines.at(i).x) + (Lines.at(i).y - Lines.at(i).y) * (Lines.at(i).y - Lines.at(i).y) + ((-R - 0.1) - (R + 0.1)) * ((-R - 0.1) - (R + 0.1));
-			double B = 2 * ((Lines.at(i).x - Lines.at(i).x) * (Lines.at(i).x - ScopeCenter.at(j).x) + (Lines.at(i).y - Lines.at(i).y) * (Lines.at(i).y - ScopeCenter.at(j).y) + ((-R - 0.1) - (R + 0.1)) * ((R + 0.1) - ScopeCenter.at(j).z));
-			double C = (Lines.at(i).x - ScopeCenter.at(j).x) * (Lines.at(i).x - ScopeCenter.at(j).x) + (Lines.at(i).y - ScopeCenter.at(j).y) * (Lines.at(i).y - ScopeCenter.at(j).y) + ((R + 0.1) - ScopeCenter.at(j).z) *((R + 0.1) - ScopeCenter.at(j).z) - (R * R);
+			double A = ((-R - 0.1) - (R + 0.1)) * ((-R - 0.1) - (R + 0.1));
+			double B = 2 * (((-R - 0.1) - (R + 0.1)) * ((R + 0.1) - ScopeCenter.at(j).z));
+			double C = ((R + 0.1) - ScopeCenter.at(j).z) * ((R + 0.1) - ScopeCenter.at(j).z) - (R * R);
 
 			double D = (B * B) - (4 * A * C);
 			double SQ = fast_math::sqrt(D);
@@ -157,13 +157,13 @@ void CPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeCenter, vec
 				double t2 = (-B - SQ) / (2 * A);
 
 				//TODO:Первая точка пересечения
-				double x1 = Lines.at(i).x + t1 * (Lines.at(i).x - Lines.at(i).x);
-				double y1 = Lines.at(i).y + t1 * (Lines.at(i).y - Lines.at(i).y);
+				double x1 = Lines.at(i).x;
+				double y1 = Lines.at(i).y;
 				double z1 = (R + 0.1) + t1 * ((-R - 0.1) - (R + 0.1));
 
 				//TODO:Вторая точка пересечения
-				double x2 = Lines.at(i).x + t2 * (Lines.at(i).x - Lines.at(i).x);
-				double y2 = Lines.at(i).y + t2 * (Lines.at(i).y - Lines.at(i).y);
+				double x2 = Lines.at(i).x;
+				double y2 = Lines.at(i).y;
 				double z2 = (R + 0.1) + t2 * ((-R - 0.1) - (R + 0.1));
 
 
@@ -185,8 +185,8 @@ void CPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeCenter, vec
 			{
 				double t1 = (-B + SQ) / (2 * A);
 				//TODO: Первая точка пересечения
-				double x1 = Lines.at(i).x + t1 * (Lines.at(i).x - Lines.at(i).x);
-				double y1 = Lines.at(i).y + t1 * (Lines.at(i).y - Lines.at(i).y);
+				double x1 = Lines.at(i).x;
+				double y1 = Lines.at(i).y;
 				double z1 = (R + 0.1) + t1 * ((-R - 0.1) - (R + 0.1));
 				
 				Point a1;

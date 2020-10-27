@@ -45,7 +45,7 @@ struct Point
 	double x = 0;
 	double y = 0;
 	double z = 0;
-	//bool valide = true;   //TODO: ‘лаг валидности точки, типа в теории мы все равно должны создать экземпл€р - прототип точки, чтоб отроботал расчет
+	bool valide = true;   //TODO: ‘лаг валидности точки, типа в теории мы все равно должны создать экземпл€р - прототип точки, чтоб отроботал расчет
 };
 
 //TODO: —труктура дл€ храенени€ точек пересечени€, типа их не может быть больше двух
@@ -99,12 +99,12 @@ void SimpleSqrtGPUCalc(std::vector<Line>& Lines, int StepX, int StepY, double R,
 				NI[idx].onePoint.x = x1;
 				NI[idx].onePoint.y = y1;
 				NI[idx].onePoint.z = z1;
-				//NI[idx].onePoint.valide = true;
+				NI[idx].onePoint.valide = true;
 
 				NI[idx].twoPoint.x = x2;
 				NI[idx].twoPoint.y = y2;
 				NI[idx].twoPoint.z = z2;
-				//NI[idx].twoPoint.valide = true;
+				NI[idx].twoPoint.valide = true;
 			}
 
 			else if (D == 0)
@@ -119,15 +119,15 @@ void SimpleSqrtGPUCalc(std::vector<Line>& Lines, int StepX, int StepY, double R,
 				NI[idx].onePoint.x = x1;
 				NI[idx].onePoint.y = y1;
 				NI[idx].onePoint.z = z1;
-				//NI[idx].onePoint.valide = true;
+				NI[idx].onePoint.valide = true;
 
-				//NI[idx].twoPoint.valide = false;
+				NI[idx].twoPoint.valide = false;
 
 			}
 			else
 			{
-				//NI[idx].onePoint.valide = false;
-				//NI[idx].twoPoint.valide = false;
+				NI[idx].onePoint.valide = false;
+				NI[idx].twoPoint.valide = false;
 			}
 			
 		
@@ -193,17 +193,17 @@ void CPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeCenter, vec
 				a1.x = x1;
 				a1.y = y1;
 				a1.z = z1;
-				//a1.valide = true;
+				a1.valide = true;
 
 				NeedIntersections[j * Lines.size() + i].onePoint = a1;
 
-				//NeedIntersections[j * Lines.size() + i].twoPoint.valide = false;
+				NeedIntersections[j * Lines.size() + i].twoPoint.valide = false;
 			
 			}
 			else
 			{
-				//NeedIntersections[j * Lines.size() + i].onePoint.valide = false;
-				//NeedIntersections[j * Lines.size() + i].twoPoint.valide = false;
+				NeedIntersections[j * Lines.size() + i].onePoint.valide = false;
+				NeedIntersections[j * Lines.size() + i].twoPoint.valide = false;
 			}
 			
 		}

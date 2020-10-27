@@ -247,9 +247,10 @@ int main()
 	{
 		for (int j = 0; j < StepX + 1; j++)
 		{
-			Lines[i*(StepY + 1) + j].x = j * (R + 0.1); //координаты X
-			Lines[i*(StepY + 1) + j].y = i * (R + 0.1); //координаты Y 
+			Lines[i * (StepY + 1) + j].x = j * (R + 0.1); //координаты X
+			Lines[i * (StepY + 1) + j].y = i * (R + 0.1); //координаты Y 
 		}
+	}
 		vector <Point> ScopeCenter(NumberOfScope); //Центры сфер	
 		for (int i = 0; i < NumberOfScope; i++)
 		{
@@ -296,4 +297,3 @@ int main()
 
 		system("pause");
 	}
-}

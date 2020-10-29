@@ -78,7 +78,7 @@ void SimpleSqrtGPUCalc(std::vector<Line>& Lines, int StepX, int StepY, double R,
 			double B = 2 * (((-R - 0.1) - (R + 0.1)) * ((R + 0.1) - SC(idx[0]).z));
 			double C = ((L(idx).x - SC(idx[0]).x) * (L(idx).x - SC(idx[0]).x)) + ((L(idx).y - SC(idx[0]).y) * (L(idx).y - SC(idx[0]).y)) + (((R + 0.1) - SC(idx[0]).z) *((R + 0.1) - SC(idx[0]).z)) - (R * R);
 
-			double D = (B * B) - (4 * A * C);
+			double D = (B * B) - 4 * A * C;
 
 			if (D > 0)
 			{
@@ -140,30 +140,32 @@ void SimpleSqrtGPUCalc(std::vector<Line>& Lines, int StepX, int StepY, double R,
 void CPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeCenter, vector<TwoPoints>& NeedIntersections)
 {
 
-	for (int j = 0; j < ScopeCenter.size(); j++) 
+	for (int i = 0; i < Lines.size(); i++)
 	{
-		for (int i = 0; i < Lines.size(); i++) 
+		for (int j = 0; j < ScopeCenter.size(); j++)
 		{
 
 			double A = ((-R - 0.1) - (R + 0.1)) * ((-R - 0.1) - (R + 0.1));
-			double B = 2 * (((-R - 0.1) - (R + 0.1)) * ((R + 0.1) - ScopeCenter.at(j).z));
-			double C = ((R + 0.1) - ScopeCenter.at(j).z) * ((R + 0.1) - ScopeCenter.at(j).z) - (R * R);
+			double B = 2 * (((-R - 0.1) - (R + 0.1)) * ((R + 0.1) - ScopeCenter[j].z));
+			double C = ((Lines[i].x - ScopeCenter[j].x) * (Lines[i].x - ScopeCenter[j].x)) + ((Lines[i].y - ScopeCenter[j].y) * (Lines[i].y - ScopeCenter[j].y)) + (((R + 0.1) - ScopeCenter[j].z) * ((R + 0.1) - ScopeCenter[j].z)) - (R * R);
+			
 
-			double D = (B * B) - (4 * A * C);
-			double SQ = fast_math::sqrt(D);
+			double D = (B * B) - 4 * A * C;
+			
 			if (D > 0)
 			{
+				double SQ = fast_math::sqrt(D);
 				double t1 = (-B + SQ) / (2 * A);
 				double t2 = (-B - SQ) / (2 * A);
 
 				//TODO:Первая точка пересечения
-				double x1 = Lines.at(i).x;
-				double y1 = Lines.at(i).y;
+				double x1 = Lines[i].x;
+				double y1 = Lines[i].y;
 				double z1 = (R + 0.1) + t1 * ((-R - 0.1) - (R + 0.1));
 
 				//TODO:Вторая точка пересечения
-				double x2 = Lines.at(i).x;
-				double y2 = Lines.at(i).y;
+				double x2 = Lines[i].x;
+				double y2 = Lines[i].y;
 				double z2 = (R + 0.1) + t2 * ((-R - 0.1) - (R + 0.1));
 
 
@@ -178,15 +180,16 @@ void CPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeCenter, vec
 				a2.x = x2;
 				a2.y = y2;
 				a2.z = z2;
-				NeedIntersections[j * Lines.size() + i].onePoint = a2;
+				NeedIntersections[j * Lines.size() + i].twoPoint = a2;
 			}
 
 			else if (D == 0)
 			{
+				double SQ = fast_math::sqrt(D);
 				double t1 = (-B + SQ) / (2 * A);
 				//TODO: Первая точка пересечения
-				double x1 = Lines.at(i).x;
-				double y1 = Lines.at(i).y;
+				double x1 = Lines[i].x;
+				double y1 = Lines[i].y;
 				double z1 = (R + 0.1) + t1 * ((-R - 0.1) - (R + 0.1));
 				
 				Point a1;
@@ -195,16 +198,16 @@ void CPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeCenter, vec
 				a1.z = z1;
 				a1.valide = true;
 
-				NeedIntersections[j * Lines.size() + i].onePoint = a1;
+				/*NeedIntersections[j * Lines.size() + i].onePoint = a1;
 
-				NeedIntersections[j * Lines.size() + i].twoPoint.valide = false;
+				NeedIntersections[j * Lines.size() + i].twoPoint.valide = false;*/
 			
 			}
-			else
+			/*else
 			{
 				NeedIntersections[j * Lines.size() + i].onePoint.valide = false;
 				NeedIntersections[j * Lines.size() + i].twoPoint.valide = false;
-			}
+			}*/
 			
 		}
 
@@ -262,7 +265,7 @@ int main()
 		int NN = ScopeCenter.size();
 		vector<TwoPoints> NeedIntersections(ArraySize);
 
-		cout << "GPU" << std::endl << std::endl;
+		cout << "GPU" << std::endl;
 		unsigned int start_time = clock(); //начальное время
 
 		SimpleSqrtGPUCalc(Lines, StepX, StepX, R, ScopeCenter, NeedIntersections);
@@ -286,14 +289,5 @@ int main()
 		unsigned int end_time2 = clock(); // конечное время
 		unsigned int search_time2 = end_time2 - start_time2; // искомое время
 		cout << search_time2 << " ms." << endl;
-
-		/*for (int i = 0; i < Lines.size(); i++)
-		{
-			for (int j = 0; j < Lines.at(i).IntersectionPoints.size(); j++)
-			{
-				cout << "Линия " << i + 1 << ", Сфера " << Lines[i].IntersectionPoints[j].Scope + 1 << ", X = " << Lines[i].IntersectionPoints[j].x << ", Y = " << Lines.at(i).IntersectionPoints.at(j).y << ", Z = " << Lines.at(i).IntersectionPoints.at(j).z << "\n";
-			}
-		}*/
-
 		system("pause");
 	}

@@ -65,18 +65,18 @@ struct Line
 void SimpleSqrtGPUCalc(std::vector<Line>& Lines, int StepX, int StepY, double R, vector<Point>& ScopeCenter, vector<TwoPoints>& NeedIntersections)
 {
 	int N = Lines.size();
-	array_view<const Line, 2 > L(StepX, StepY, Lines);
+	array_view<const Line, 1 > L((StepX+1) * (StepY+1), Lines);
 	array_view<const Point, 1 > SC(ScopeCenter.size(), ScopeCenter);
-	array_view<TwoPoints, 2 > NI(StepX, StepY, NeedIntersections);
+	array_view<TwoPoints, 1 > NI((StepX + 1) * (StepY + 1), NeedIntersections);
 	NI.discard_data();
 	
 
-	parallel_for_each(NI.extent, [=](index<2> idx) restrict(amp)
+	parallel_for_each(NI.extent, [=](index<1> idx) restrict(amp)
 	{
 
 			double A = ((-R - 0.1) - (R + 0.1)) * ((-R - 0.1) - (R + 0.1));
 			double B = 2 * (((-R - 0.1) - (R + 0.1)) * ((R + 0.1) - SC(idx[0]).z));
-			double C = ((L(idx).x - SC(idx[0]).x) * (L(idx).x - SC(idx[0]).x)) + ((L(idx).y - SC(idx[0]).y) * (L(idx).y - SC(idx[0]).y)) + (((R + 0.1) - SC(idx[0]).z) *((R + 0.1) - SC(idx[0]).z)) - (R * R);
+			double C = ((L(idx[0]).x - SC(idx[0]).x) * (L(idx[0]).x - SC(idx[0]).x)) + ((L(idx[0]).y - SC(idx[0]).y) * (L(idx[0]).y - SC(idx[0]).y)) + (((R + 0.1) - SC(idx[0]).z) *((R + 0.1) - SC(idx[0]).z)) - (R * R);
 
 			double D = (B * B) - 4 * A * C;
 
@@ -87,13 +87,13 @@ void SimpleSqrtGPUCalc(std::vector<Line>& Lines, int StepX, int StepY, double R,
 				double t2 = (-B - SQ) / (2 * A);
 
 				//Первая точка пересечения
-				double x1 = L(idx).x;
-				double y1 = L(idx).y;
+				double x1 = L(idx[0]).x;
+				double y1 = L(idx[0]).y;
 				double z1 = (R + 0.1) + t1 * ((-R - 0.1) - (R + 0.1));
 
 				//Вторая точка пересечения
-				double x2 = L(idx).x;
-				double y2 = L(idx).y;
+				double x2 = L(idx[0]).x;
+				double y2 = L(idx[0]).y;
 				double z2 = (R + 0.1) + t2 * ((-R - 0.1) - (R + 0.1));
 
 				NI[idx].onePoint.x = x1;
@@ -112,8 +112,8 @@ void SimpleSqrtGPUCalc(std::vector<Line>& Lines, int StepX, int StepY, double R,
 				double SQ = fast_math::sqrt(D);
 				double t1 = (-B + SQ) / (2 * A);
 				//Первая точка пересечения
-				double x1 = L(idx).x;
-				double y1 = L(idx).y;
+				double x1 = L(idx[0]).x;
+				double y1 = L(idx[0]).y;
 				double z1 = (R + 0.1) + t1 * ((-R - 0.1) - (R + 0.1));
 					
 				NI[idx].onePoint.x = x1;
@@ -174,13 +174,13 @@ void CPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeCenter, vec
 				a1.y = y1;
 				a1.z = z1;
 				
-				NeedIntersections[j * Lines.size() + i].onePoint = a1;
+				NeedIntersections[i].onePoint = a1;
 
 				Point a2;
 				a2.x = x2;
 				a2.y = y2;
 				a2.z = z2;
-				NeedIntersections[j * Lines.size() + i].twoPoint = a2;
+				NeedIntersections[i].twoPoint = a2;
 			}
 
 			else if (D == 0)

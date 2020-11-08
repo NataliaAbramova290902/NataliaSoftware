@@ -62,155 +62,154 @@ struct Line
 	double y = 0;
 };
 
-void SimpleSqrtGPUCalc(std::vector<Line>& Lines, int StepX, int StepY, double R, vector<Point>& ScopeCenter, vector<TwoPoints>& NeedIntersections)
+void GPUCalc(int StepX, int StepY, double R, vector<Point>& ScopeCenter, vector<TwoPoints>& NeedIntersections)
 {
-	int N = Lines.size();
-	array_view<const Line, 1 > L((StepX+1) * (StepY+1), Lines);
+	//int N = NeedIntersections.size();
+	//array_view<const Line, 1 > L((StepX+1) * (StepY+1), Lines);
 	array_view<const Point, 1 > SC(ScopeCenter.size(), ScopeCenter);
-	array_view<TwoPoints, 1 > NI((StepX + 1) * (StepY + 1), NeedIntersections);
+	array_view<TwoPoints, 1> NI((StepX + 1) * (StepY + 1), NeedIntersections);
 	NI.discard_data();
 	
-
-	parallel_for_each(NI.extent, [=](index<1> idx) restrict(amp)
+	
+	parallel_for_each(SC.extent, [=](index<1> idx) restrict(amp)
 	{
-
-			double A = ((-R - 0.1) - (R + 0.1)) * ((-R - 0.1) - (R + 0.1));
-			double B = 2 * (((-R - 0.1) - (R + 0.1)) * ((R + 0.1) - SC(idx[0]).z));
-			double C = ((L(idx[0]).x - SC(idx[0]).x) * (L(idx[0]).x - SC(idx[0]).x)) + ((L(idx[0]).y - SC(idx[0]).y) * (L(idx[0]).y - SC(idx[0]).y)) + (((R + 0.1) - SC(idx[0]).z) *((R + 0.1) - SC(idx[0]).z)) - (R * R);
-
-			double D = (B * B) - 4 * A * C;
-
-			if (D > 0)
+		for (int i = fast_math::floor(SC[idx].y - R); i < fast_math::floor(SC[idx].y + R) + 1; i++)
+		{
+			for (int j = fast_math::floor(SC[idx].x - R); j < fast_math::floor(SC[idx].x + R) + 1; j++)
 			{
-				double SQ = fast_math::sqrt(D);
-				double t1 = (-B + SQ) / (2 * A);
-				double t2 = (-B - SQ) / (2 * A);
+				double A = ((-R - 0.1) - (R + 0.1)) * ((-R - 0.1) - (R + 0.1));
+				double B = 2 * (((-R - 0.1) - (R + 0.1)) * ((R + 0.1) - SC[idx].z));
+				double C = ((j - SC[idx].x) * (j - SC[idx].x) + (i - SC[idx].y) * (i - SC[idx].y) + ((R + 0.1) - SC[idx].z) * ((R + 0.1) - SC[idx].z)) - (R * R);
 
-				//Первая точка пересечения
-				double x1 = L(idx[0]).x;
-				double y1 = L(idx[0]).y;
-				double z1 = (R + 0.1) + t1 * ((-R - 0.1) - (R + 0.1));
+				double D = (B * B) - 4 * A * C;
 
-				//Вторая точка пересечения
-				double x2 = L(idx[0]).x;
-				double y2 = L(idx[0]).y;
-				double z2 = (R + 0.1) + t2 * ((-R - 0.1) - (R + 0.1));
+				if (D > 0)
+				{
+					double SQ = fast_math::sqrt(D);
+					double t1 = (-B + SQ) / (2 * A);
+					double t2 = (-B - SQ) / (2 * A);
 
-				NI[idx].onePoint.x = x1;
-				NI[idx].onePoint.y = y1;
-				NI[idx].onePoint.z = z1;
-				NI[idx].onePoint.valide = true;
+					//Первая точка пересечения
+					double x1 = j;
+					double y1 = i;
+					double z1 = (R + 0.1) + t1 * ((-R - 0.1) - (R + 0.1));
 
-				NI[idx].twoPoint.x = x2;
-				NI[idx].twoPoint.y = y2;
-				NI[idx].twoPoint.z = z2;
-				NI[idx].twoPoint.valide = true;
+					//Вторая точка пересечения
+					double x2 = j;
+					double y2 = i;
+					double z2 = (R + 0.1) + t2 * ((-R - 0.1) - (R + 0.1));
+
+					NI[i * (StepX + 1) + j].onePoint.x = x1;
+					NI[i * (StepX + 1) + j].onePoint.y = y1;
+					NI[i * (StepX + 1) + j].onePoint.z = z1;
+					NI[i * (StepX + 1) + j].onePoint.valide = true;
+
+					NI[i * (StepX + 1) + j].twoPoint.x = x2;
+					NI[i * (StepX + 1) + j].twoPoint.y = y2;
+					NI[i * (StepX + 1) + j].twoPoint.z = z2;
+					NI[i * (StepX + 1) + j].twoPoint.valide = true;
+				}
+
+				else if (D == 0)
+				{
+					double SQ = fast_math::sqrt(D);
+					double t1 = (-B + SQ) / (2 * A);
+					//Первая точка пересечения
+					double x1 = j;
+					double y1 = i;
+					double z1 = (R + 0.1) + t1 * ((-R - 0.1) - (R + 0.1));
+
+					double x2 = j;
+					double y2 = i;
+					double z2 = (R + 0.1) + t1 * ((-R - 0.1) - (R + 0.1));
+
+					NI[i * (StepX + 1) + j].onePoint.x = x1;
+					NI[i * (StepX + 1) + j].onePoint.y = y1;
+					NI[i * (StepX + 1) + j].onePoint.z = z1;
+					NI[i * (StepX + 1) + j].onePoint.valide = true;
+
+					NI[i * (StepX + 1) + j].twoPoint = NI[i * (StepX + 1) + j].onePoint;
+
+				}
 			}
 
-			else if (D == 0)
-			{
-				double SQ = fast_math::sqrt(D);
-				double t1 = (-B + SQ) / (2 * A);
-				//Первая точка пересечения
-				double x1 = L(idx[0]).x;
-				double y1 = L(idx[0]).y;
-				double z1 = (R + 0.1) + t1 * ((-R - 0.1) - (R + 0.1));
-					
-				NI[idx].onePoint.x = x1;
-				NI[idx].onePoint.y = y1;
-				NI[idx].onePoint.z = z1;
-				NI[idx].onePoint.valide = true;
-
-				NI[idx].twoPoint.valide = false;
-
-			}
-			else
-			{
-				NI[idx].onePoint.valide = false;
-				NI[idx].twoPoint.valide = false;
-			}
-			
-		
+		}
     });
 	NI.synchronize();
+	
 	
 }
 
 
-void CPUCalc(std::vector<Line>& Lines, double R, vector<Point>& ScopeCenter, vector<TwoPoints>& NeedIntersections)
+void CPUCalc(double R, vector<Point>& ScopeCenter, vector<TwoPoints>& NeedIntersections, int StepX)
 {
-
-	for (int i = 0; i < Lines.size(); i++)
-	{
-		for (int j = 0; j < ScopeCenter.size(); j++)
+	for (int k = 0; k < ScopeCenter.size(); k++)
+	{ 
+		for (int i = floor(ScopeCenter[k].y - R); i < floor(ScopeCenter[k].y + R)+1; i++)
 		{
-
-			double A = ((-R - 0.1) - (R + 0.1)) * ((-R - 0.1) - (R + 0.1));
-			double B = 2 * (((-R - 0.1) - (R + 0.1)) * ((R + 0.1) - ScopeCenter[j].z));
-			double C = ((Lines[i].x - ScopeCenter[j].x) * (Lines[i].x - ScopeCenter[j].x)) + ((Lines[i].y - ScopeCenter[j].y) * (Lines[i].y - ScopeCenter[j].y)) + (((R + 0.1) - ScopeCenter[j].z) * ((R + 0.1) - ScopeCenter[j].z)) - (R * R);
-			
-
-			double D = (B * B) - 4 * A * C;
-			
-			if (D > 0)
+			for (int j = floor(ScopeCenter[k].x - R); j < floor(ScopeCenter[k].x + R)+1; j++)
 			{
-				double SQ = fast_math::sqrt(D);
-				double t1 = (-B + SQ) / (2 * A);
-				double t2 = (-B - SQ) / (2 * A);
-
-				//TODO:Первая точка пересечения
-				double x1 = Lines[i].x;
-				double y1 = Lines[i].y;
-				double z1 = (R + 0.1) + t1 * ((-R - 0.1) - (R + 0.1));
-
-				//TODO:Вторая точка пересечения
-				double x2 = Lines[i].x;
-				double y2 = Lines[i].y;
-				double z2 = (R + 0.1) + t2 * ((-R - 0.1) - (R + 0.1));
+				double A = ((-R - 0.1) - (R + 0.1)) * ((-R - 0.1) - (R + 0.1));
+				double B = 2 * (((-R - 0.1) - (R + 0.1)) * ((R + 0.1) - ScopeCenter[k].z));
+				double C = ((j - ScopeCenter[k].x) * (j - ScopeCenter[k].x) + (i - ScopeCenter[k].y) * (i - ScopeCenter[k].y) + ((R + 0.1) - ScopeCenter[k].z) * ((R + 0.1) - ScopeCenter[k].z)) - (R * R);
 
 
-				Point a1;
-				a1.x = x1;
-				a1.y = y1;
-				a1.z = z1;
-				
-				NeedIntersections[i].onePoint = a1;
+				double D = (B * B) - 4 * A * C;
 
-				Point a2;
-				a2.x = x2;
-				a2.y = y2;
-				a2.z = z2;
-				NeedIntersections[i].twoPoint = a2;
+				if (D > 0)
+				{
+					double SQ = fast_math::sqrt(D);
+					double t1 = (-B + SQ) / (2 * A);
+					double t2 = (-B - SQ) / (2 * A);
+
+					//TODO:Первая точка пересечения
+					double x1 = j;
+					double y1 = i;
+					double z1 = (R + 0.1) + t1 * ((-R - 0.1) - (R + 0.1));
+
+					//TODO:Вторая точка пересечения
+					double x2 = j;
+					double y2 = i;
+					double z2 = (R + 0.1) + t2 * ((-R - 0.1) - (R + 0.1));
+
+
+					Point a1;
+					a1.x = x1;
+					a1.y = y1;
+					a1.z = z1;
+
+					NeedIntersections[i * (StepX + 1) + j].onePoint = a1;
+
+					Point a2;
+					a2.x = x2;
+					a2.y = y2;
+					a2.z = z2;
+					NeedIntersections[i * (StepX + 1) + j].twoPoint = a2;
+				}
+
+				else if (D == 0)
+				{
+					double SQ = sqrt(D);
+					double t1 = (-B + SQ) / (2 * A);
+					//TODO: Первая точка пересечения
+					double x1 = j;
+					double y1 = i;
+					double z1 = (R + 0.1) + t1 * ((-R - 0.1) - (R + 0.1));
+
+					Point a1;
+					a1.x = x1;
+					a1.y = y1;
+					a1.z = z1;
+					a1.valide = true;
+
+					NeedIntersections[i * (StepX + 1) + j].onePoint = a1;
+
+					NeedIntersections[i * (StepX + 1) + j].twoPoint = NeedIntersections[i * (StepX + 1) + j].onePoint;
+
+				}
 			}
 
-			else if (D == 0)
-			{
-				double SQ = fast_math::sqrt(D);
-				double t1 = (-B + SQ) / (2 * A);
-				//TODO: Первая точка пересечения
-				double x1 = Lines[i].x;
-				double y1 = Lines[i].y;
-				double z1 = (R + 0.1) + t1 * ((-R - 0.1) - (R + 0.1));
-				
-				Point a1;
-				a1.x = x1;
-				a1.y = y1;
-				a1.z = z1;
-				a1.valide = true;
-
-				/*NeedIntersections[j * Lines.size() + i].onePoint = a1;
-
-				NeedIntersections[j * Lines.size() + i].twoPoint.valide = false;*/
-			
-			}
-			/*else
-			{
-				NeedIntersections[j * Lines.size() + i].onePoint.valide = false;
-				NeedIntersections[j * Lines.size() + i].twoPoint.valide = false;
-			}*/
-			
 		}
-
 	}
 };
 
@@ -224,8 +223,6 @@ int main()
 	double R;
 	int NumberOfScope; //TODO: колличество сфер
 
-
-	//vector <Point> ScopeCenter;
 	accelerator defaultDevice(accelerator::default_accelerator);
 	accelerator_view defaultView = defaultDevice.default_view;
 	wcout << L" Using device : " << defaultDevice.get_description() << endl << endl; //TODO: Название использующейся видеокарты
@@ -240,27 +237,36 @@ int main()
 
 	cout << "Введите радиус" << endl;
 	cin >> R;
+	int max_c = (floor(StepX / (2*(R + 0.1))) * (floor(StepY / (2*(R + 0.1)))));
 
-
-	cout << "Колличество сфер (максимальное колиество " << ArraySize << ")" << endl;
+	cout << "Колличество сфер (максимальное колиество " << max_c << ")" << endl;
 	cin >> NumberOfScope;
 
-	vector<Line> Lines(ArraySize); //кординаты линий	
-	for (int i = 0; i < StepY + 1; i++)
-	{
-		for (int j = 0; j < StepX + 1; j++)
-		{
-			Lines[i * (StepY + 1) + j].x = j * (R + 0.1); //координаты X
-			Lines[i * (StepY + 1) + j].y = i * (R + 0.1); //координаты Y 
-		}
-	}
 		vector <Point> ScopeCenter(NumberOfScope); //Центры сфер	
-		for (int i = 0; i < NumberOfScope; i++)
+		for (int i = 0; i < (floor(NumberOfScope / floor(StepY / 2 * (R + 0.1)))); ++i)
 		{
-			ScopeCenter[i].x = Lines[i].x;
-			ScopeCenter[i].y = Lines[i].y;
-			ScopeCenter[i].z = 0;
+			for (int j = 0; j < floor(StepX / 2 * (R + 0.1)); j++)
+			{
+				ScopeCenter[i * floor(StepY / 2 *(R + 0.1)) + j].x = (R + 0.1) * (2 * j + 1);
+				ScopeCenter[i * floor(StepY / 2 *(R + 0.1)) + j].y = (R + 0.1) * (2 * i + 1);
+				ScopeCenter[i * floor(StepY / 2 *(R + 0.1)) + j].z = 0;
+			}
 		}
+		int n = floor(StepY / 2 * (R + 0.1));
+		if (NumberOfScope % n != 0)
+		{
+			for (int i = (floor(NumberOfScope / floor(StepY / 2 * (R + 0.1)))) * floor(StepX / 2 * (R + 0.1)); i < (floor(NumberOfScope / floor(StepY / 2 * (R + 0.1)))) * floor(StepX / 2 * (R + 0.1)) + 1; i++)
+			{
+				for (int j = 0; j < (NumberOfScope - (floor(NumberOfScope / floor(StepY / 2 * (R + 0.1)))) * floor(StepX / 2 * (R + 0.1))); j++)
+				{
+					ScopeCenter[i + j].x = (R + 0.1) * (2 * j + 1);
+					ScopeCenter[i + j].y = (R + 0.1) * (2 * (floor(NumberOfScope / floor(StepY / (R + 0.1)))) + 2 + 1);
+					ScopeCenter[i + j].z = 0;
+				}
+			}
+		}
+		
+
 
 		int NN = ScopeCenter.size();
 		vector<TwoPoints> NeedIntersections(ArraySize);
@@ -268,7 +274,7 @@ int main()
 		cout << "GPU" << std::endl;
 		unsigned int start_time = clock(); //начальное время
 
-		SimpleSqrtGPUCalc(Lines, StepX, StepX, R, ScopeCenter, NeedIntersections);
+		GPUCalc(StepX, StepX, R, ScopeCenter, NeedIntersections);
 
 		unsigned int end_time = clock(); // конечное время
 		unsigned int search_time = end_time - start_time; // искомое время
@@ -284,7 +290,7 @@ int main()
 		cout << "СPU" << endl;
 		unsigned int start_time2 = clock(); //начальное время
 
-		CPUCalc(Lines, R, ScopeCenter, NeedIntersections);
+		CPUCalc(R, ScopeCenter, NeedIntersections, StepX);
 
 		unsigned int end_time2 = clock(); // конечное время
 		unsigned int search_time2 = end_time2 - start_time2; // искомое время

@@ -45,14 +45,14 @@ struct Point
 	double x = 0;
 	double y = 0;
 	double z = 0;
-	bool valide = true;   //TODO: Флаг валидности точки, типа в теории мы все равно должны создать экземпляр - прототип точки, чтоб отроботал расчет
+	//bool valide = true;   //TODO: Флаг валидности точки, типа в теории мы все равно должны создать экземпляр - прототип точки, чтоб отроботал расчет
 };
 
 //TODO: Структура для храенения точек пересечения, типа их не может быть больше двух
 struct TwoPoints
 {
-	Point onePoint;
-	Point twoPoint;	
+	double onePointZ;
+	double twoPointZ;	
 };
 
 
@@ -99,15 +99,15 @@ void GPUCalc(int StepX, int StepY, double R, vector<Point>& ScopeCenter, vector<
 					double y2 = i;
 					double z2 = (R + 0.1) + t2 * ((-R - 0.1) - (R + 0.1));
 
-					NI[i * (StepX + 1) + j].onePoint.x = x1;
-					NI[i * (StepX + 1) + j].onePoint.y = y1;
-					NI[i * (StepX + 1) + j].onePoint.z = z1;
-					NI[i * (StepX + 1) + j].onePoint.valide = true;
+					///NI[i * (StepX + 1) + j].onePoint.x = x1;
+					//NI[i * (StepX + 1) + j].onePoint.y = y1;
+					NI[i * (StepX + 1) + j].onePointZ = z1;
+					//NI[i * (StepX + 1) + j].onePoint.valide = true;
 
-					NI[i * (StepX + 1) + j].twoPoint.x = x2;
-					NI[i * (StepX + 1) + j].twoPoint.y = y2;
-					NI[i * (StepX + 1) + j].twoPoint.z = z2;
-					NI[i * (StepX + 1) + j].twoPoint.valide = true;
+					//NI[i * (StepX + 1) + j].twoPoint.x = x2;
+					//NI[i * (StepX + 1) + j].twoPoint.y = y2;
+					NI[i * (StepX + 1) + j].twoPointZ = z2;
+					//NI[i * (StepX + 1) + j].twoPoint.valide = true;
 				}
 
 				else if (D == 0)
@@ -123,12 +123,12 @@ void GPUCalc(int StepX, int StepY, double R, vector<Point>& ScopeCenter, vector<
 					double y2 = i;
 					double z2 = (R + 0.1) + t1 * ((-R - 0.1) - (R + 0.1));
 
-					NI[i * (StepX + 1) + j].onePoint.x = x1;
-					NI[i * (StepX + 1) + j].onePoint.y = y1;
-					NI[i * (StepX + 1) + j].onePoint.z = z1;
-					NI[i * (StepX + 1) + j].onePoint.valide = true;
+					//NI[i * (StepX + 1) + j].onePoint.x = x1;
+					//NI[i * (StepX + 1) + j].onePoint.y = y1;
+					NI[i * (StepX + 1) + j].onePointZ = z1;
+					//NI[i * (StepX + 1) + j].onePoint.valide = true;
 
-					NI[i * (StepX + 1) + j].twoPoint = NI[i * (StepX + 1) + j].onePoint;
+					NI[i * (StepX + 1) + j].twoPointZ = NI[i * (StepX + 1) + j].onePointZ;
 
 				}
 			}
@@ -173,18 +173,18 @@ void CPUCalc(double R, vector<Point>& ScopeCenter, vector<TwoPoints>& NeedInters
 					double z2 = (R + 0.1) + t2 * ((-R - 0.1) - (R + 0.1));
 
 
-					Point a1;
-					a1.x = x1;
-					a1.y = y1;
-					a1.z = z1;
+					double a1;
+					//a1.x = x1;
+					//a1.y = y1;
+					a1 = z1;
 
-					NeedIntersections[i * (StepX + 1) + j].onePoint = a1;
+					NeedIntersections[i * (StepX + 1) + j].onePointZ = a1;
 
-					Point a2;
-					a2.x = x2;
-					a2.y = y2;
-					a2.z = z2;
-					NeedIntersections[i * (StepX + 1) + j].twoPoint = a2;
+					double a2;
+					//a2.x = x2;
+					//a2.y = y2;
+					a2 = z2;
+					NeedIntersections[i * (StepX + 1) + j].twoPointZ = a2;
 				}
 
 				else if (D == 0)
@@ -196,15 +196,15 @@ void CPUCalc(double R, vector<Point>& ScopeCenter, vector<TwoPoints>& NeedInters
 					double y1 = i;
 					double z1 = (R + 0.1) + t1 * ((-R - 0.1) - (R + 0.1));
 
-					Point a1;
-					a1.x = x1;
-					a1.y = y1;
-					a1.z = z1;
-					a1.valide = true;
+					double a1;
+					//a1.x = x1;
+					//a1.y = y1;
+					a1 = z1;
+					//a1.valide = true;
 
-					NeedIntersections[i * (StepX + 1) + j].onePoint = a1;
+					NeedIntersections[i * (StepX + 1) + j].onePointZ = a1;
 
-					NeedIntersections[i * (StepX + 1) + j].twoPoint = NeedIntersections[i * (StepX + 1) + j].onePoint;
+					NeedIntersections[i * (StepX + 1) + j].twoPointZ = NeedIntersections[i * (StepX + 1) + j].onePointZ;
 
 				}
 			}
@@ -242,58 +242,62 @@ int main()
 	cout << "Колличество сфер (максимальное колиество " << max_c << ")" << endl;
 	cin >> NumberOfScope;
 
-		vector <Point> ScopeCenter(NumberOfScope); //Центры сфер	
-		for (int i = 0; i < (floor(NumberOfScope / floor(StepY / 2 * (R + 0.1)))); ++i)
+
+	int stringCount= floor(NumberOfScope / (floor(StepY / 2 / (R + 0.1))));
+	int rowCount = floor(StepX / 2 / (R + 0.1));
+
+	vector <Point> ScopeCenter(NumberOfScope); //Центры сфер	
+	for (int i = 0; i < stringCount; ++i)
+	{
+		for (int j = 0; j < rowCount; j++)
 		{
-			for (int j = 0; j < floor(StepX / 2 * (R + 0.1)); j++)
+			ScopeCenter[i * floor(StepY / 2 /(R + 0.1)) + j].x = (R + 0.1) * (2 * j + 1);
+			ScopeCenter[i * floor(StepY / 2 /(R + 0.1)) + j].y = (R + 0.1) * (2 * i + 1);
+			ScopeCenter[i * floor(StepY / 2 /(R + 0.1)) + j].z = 0;
+		}
+	}
+	int n = floor(StepY / 2 / (R + 0.1));
+	if (NumberOfScope % n != 0)
+	{
+		for (int i = (floor(NumberOfScope / floor(StepY / 2 / (R + 0.1)))) * floor(StepX / 2 / (R + 0.1)); i < (floor(NumberOfScope / floor(StepY / 2 / (R + 0.1)))) * floor(StepX / 2 / (R + 0.1)) + 1; i++)
+		{
+			for (int j = 0; j < (NumberOfScope - (floor(NumberOfScope / floor(StepY / 2 / (R + 0.1)))) * floor(StepX / 2 / (R + 0.1))); j++)
 			{
-				ScopeCenter[i * floor(StepY / 2 *(R + 0.1)) + j].x = (R + 0.1) * (2 * j + 1);
-				ScopeCenter[i * floor(StepY / 2 *(R + 0.1)) + j].y = (R + 0.1) * (2 * i + 1);
-				ScopeCenter[i * floor(StepY / 2 *(R + 0.1)) + j].z = 0;
+				ScopeCenter[i + j].x = (R + 0.1) * (2 * j + 1);
+				ScopeCenter[i + j].y = (R + 0.1) * (floor(NumberOfScope / (floor(StepY / 2 / (R + 0.1)-2))));
+				ScopeCenter[i + j].z = 0.0;
 			}
 		}
-		int n = floor(StepY / 2 * (R + 0.1));
-		if (NumberOfScope % n != 0)
-		{
-			for (int i = (floor(NumberOfScope / floor(StepY / 2 * (R + 0.1)))) * floor(StepX / 2 * (R + 0.1)); i < (floor(NumberOfScope / floor(StepY / 2 * (R + 0.1)))) * floor(StepX / 2 * (R + 0.1)) + 1; i++)
-			{
-				for (int j = 0; j < (NumberOfScope - (floor(NumberOfScope / floor(StepY / 2 * (R + 0.1)))) * floor(StepX / 2 * (R + 0.1))); j++)
-				{
-					ScopeCenter[i + j].x = (R + 0.1) * (2 * j + 1);
-					ScopeCenter[i + j].y = (R + 0.1) * (2 * (floor(NumberOfScope / floor(StepY / (R + 0.1)))) + 2 + 1);
-					ScopeCenter[i + j].z = 0;
-				}
-			}
-		}
+	}
 		
 
 
-		int NN = ScopeCenter.size();
-		vector<TwoPoints> NeedIntersections(ArraySize);
+	int NN = ScopeCenter.size();
+	vector<TwoPoints> NeedIntersections(ArraySize);
 
-		cout << "GPU" << std::endl;
-		unsigned int start_time = clock(); //начальное время
+	cout << "GPU" << std::endl;
+	unsigned int start_time = clock(); //начальное время
 
-		GPUCalc(StepX, StepX, R, ScopeCenter, NeedIntersections);
+	GPUCalc(StepX, StepX, R, ScopeCenter, NeedIntersections);
 
-		unsigned int end_time = clock(); // конечное время
-		unsigned int search_time = end_time - start_time; // искомое время
-		cout << search_time << " ms." << endl;
-
-
-
-		NeedIntersections.clear();
-
-		NeedIntersections = vector<TwoPoints>(ArraySize);
+	unsigned int end_time = clock(); // конечное время
+	unsigned int search_time = end_time - start_time; // искомое время
+	cout << search_time << " ms." << endl;
 
 
-		cout << "СPU" << endl;
-		unsigned int start_time2 = clock(); //начальное время
 
-		CPUCalc(R, ScopeCenter, NeedIntersections, StepX);
+	NeedIntersections.clear();
 
-		unsigned int end_time2 = clock(); // конечное время
-		unsigned int search_time2 = end_time2 - start_time2; // искомое время
-		cout << search_time2 << " ms." << endl;
-		system("pause");
-	}
+	NeedIntersections = vector<TwoPoints>(ArraySize);
+
+
+	cout << "СPU" << endl;
+	unsigned int start_time2 = clock(); //начальное время
+
+	CPUCalc(R, ScopeCenter, NeedIntersections, StepX);
+
+	unsigned int end_time2 = clock(); // конечное время
+	unsigned int search_time2 = end_time2 - start_time2; // искомое время
+	cout << search_time2 << " ms." << endl;
+	system("pause");
+}

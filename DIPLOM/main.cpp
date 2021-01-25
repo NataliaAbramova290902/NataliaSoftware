@@ -285,7 +285,11 @@ int main()
 
 	NeedIntersections.clear();
 
-	vector<TwoPoints> NeedIntersections2 = vector<TwoPoints>(ArraySize);
+	vector<TwoPoints>().swap(NeedIntersections);
+
+	vector<TwoPoints> NeedIntersections2;
+
+	NeedIntersections2.resize(ArraySize);
 
 
 	cout << "ÑPU" << endl;

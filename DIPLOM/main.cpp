@@ -62,7 +62,169 @@ struct Line
 	double y = 0;
 };
 
-void GPUCalc(int StepX, int StepY, double R, vector<Point>& ScopeCenter, vector<TwoPoints>& NeedIntersections)
+
+void GPUCalc_1(int StepX, int StepY, double R, vector<Point>& ScopeCenter, vector<TwoPoints>& NeedIntersections)
+{
+	array_view<const Point, 1 > SC(ScopeCenter.size(), ScopeCenter);
+	array_view<TwoPoints, 2> NI((StepX + 1), (StepY + 1), NeedIntersections);
+	NI.discard_data();
+
+
+	parallel_for_each(SC.extent, [=](index<1> idx) restrict(amp)
+	{
+		for (int i = 0; i < StepX + 1; i++)
+		{
+			for (int j = 0; j < StepY + 1; j++)
+			{
+				double A = ((-100000 * R) - (100000 * R)) * ((-100000 * R) - (100000 * R));
+				double B = 2 * (((-100000 * R) - (100000 * R)) * ((100000 * R) - SC[idx].z));
+				double C = ((j - SC[idx].x) * (j - SC[idx].x) + (i - SC[idx].y) * (i - SC[idx].y) + ((100000 * R) - SC[idx].z) * ((100000 * R) - SC[idx].z)) - (R * R);
+
+				double D = (B * B) - 4 * A * C;
+
+				if (D > 0)
+				{
+					double SQ = fast_math::sqrt(D);
+					double t1 = (-B + SQ) / (2 * A);
+					double t2 = (-B - SQ) / (2 * A);
+
+					//Первая точка пересечения
+					double x1 = j;
+					double y1 = i;
+					double z1 = (100000 * R) + t1 * ((-100000 * R) - (100000 * R));
+
+					//Вторая точка пересечения
+					double x2 = j;
+					double y2 = i;
+					double z2 = (100000 * R) + t2 * ((-100000 * R) - (100000 * R));
+
+					if (z1 < z2)
+					{
+						if (NI[i][j].onePointZ > z1)
+							NI[i][j].onePointZ = z1;
+
+						if (NI[i][j].twoPointZ < z2)
+							NI[i][j].twoPointZ = z2;
+					}
+					else
+					{
+						if (NI[i][j].onePointZ > z2)
+							NI[i][j].onePointZ = z2;
+
+						if (NI[i][j].twoPointZ < z1)
+							NI[i][j].twoPointZ = z1;
+					}
+				}
+
+				else if (D == 0)
+				{
+					double SQ = fast_math::sqrt(D);
+					double t1 = (-B + SQ) / (2 * A);
+					//Первая точка пересечения
+					double x1 = j;
+					double y1 = i;
+					double z1 = (100000 * R) + t1 * ((-100000 * R) - (100000 * R));
+
+					double x2 = j;
+					double y2 = i;
+					double z2 = (100000 * R) + t1 * ((-100000 * R) - (100000 * R));
+
+					if (NI[i][j].onePointZ > z1)
+						NI[i][j].onePointZ = z1;
+
+					if (NI[i][j].twoPointZ < z1)
+						NI[i][j].twoPointZ = z1;
+
+				}
+			}
+
+		}
+	});
+	NI.synchronize();
+
+
+}
+
+void GPUCalc_2(int StepX, int StepY, double R, vector<Point>& ScopeCenter, vector<TwoPoints>& NeedIntersections, int NumberOfScope)
+{
+	array_view<const Point, 1 > SC(ScopeCenter.size(), ScopeCenter);
+	array_view<TwoPoints, 2> NI((StepX + 1), (StepY + 1), NeedIntersections);
+	NI.discard_data();
+
+
+	parallel_for_each(NI.extent, [=](index<2> idx) restrict(amp)
+	{
+			for (int c = 0; c < NumberOfScope; c++)
+			{
+				double A = ((-100000 * R) - (100000 * R)) * ((-100000 * R) - (100000 * R));
+				double B = 2 * (((-100000 * R) - (100000 * R)) * ((100000 * R) - SC[c].z));
+				double C = ((idx[1] - SC[c].x) * (idx[1] - SC[c].x) + (idx[0] - SC[c].y) * (idx[0] - SC[c].y) + ((100000 * R) - SC[c].z) * ((100000 * R) - SC[c].z)) - (R * R);
+
+				double D = (B * B) - 4 * A * C;
+
+				if (D > 0)
+				{
+					double SQ = fast_math::sqrt(D);
+					double t1 = (-B + SQ) / (2 * A);
+					double t2 = (-B - SQ) / (2 * A);
+
+					//Первая точка пересечения
+					double x1 = idx[1];
+					double y1 = idx[0];
+					double z1 = (100000 * R) + t1 * ((-100000 * R) - (100000 * R));
+
+					//Вторая точка пересечения
+					double x2 = idx[1];
+					double y2 = idx[0];
+					double z2 = (100000 * R) + t2 * ((-100000 * R) - (100000 * R));
+
+					if (z1 < z2)
+					{
+						if (NI[idx].onePointZ > z1)
+							NI[idx].onePointZ = z1;
+
+						if (NI[idx].twoPointZ < z2)
+							NI[idx].twoPointZ = z2;
+					}
+					else
+					{
+						if (NI[idx].onePointZ > z2)
+							NI[idx].onePointZ = z2;
+
+						if (NI[idx].twoPointZ < z1)
+							NI[idx].twoPointZ = z1;
+					}
+				}
+
+				else if (D == 0)
+				{
+					double SQ = fast_math::sqrt(D);
+					double t1 = (-B + SQ) / (2 * A);
+					//Первая точка пересечения
+					double x1 = idx[1];
+					double y1 = idx[0];
+					double z1 = (100000 * R) + t1 * ((-100000 * R) - (100000 * R));
+
+					double x2 = idx[1];
+					double y2 = idx[0];
+					double z2 = (100000 * R) + t1 * ((-100000 * R) - (100000 * R));
+
+					if (NI[idx].onePointZ > z1)
+						NI[idx].onePointZ = z1;
+
+					if (NI[idx].twoPointZ < z1)
+						NI[idx].twoPointZ = z1;
+
+				}
+			}
+
+	});
+	NI.synchronize();
+
+
+}
+
+void GPUCalc_3(int StepX, int StepY, double R, vector<Point>& ScopeCenter, vector<TwoPoints>& NeedIntersections)
 {
 	array_view<const Point, 1 > SC(ScopeCenter.size(), ScopeCenter);
 	array_view<TwoPoints, 2> NI((StepX + 1) , (StepY + 1), NeedIntersections);
@@ -321,17 +483,16 @@ int main()
 	int NN = ScopeCenter.size();
 	vector<TwoPoints> NeedIntersections(ArraySize);
 
-	cout << "GPU" << std::endl;
+	cout << "GPU_v1" << std::endl;
 	unsigned int start_time = clock(); //начальное время
 
-	GPUCalc(StepX, StepX, R, ScopeCenter, NeedIntersections);
+	GPUCalc_1(StepX, StepX, R, ScopeCenter, NeedIntersections);
 
 	unsigned int end_time = clock(); // конечное время
 	unsigned int search_time = end_time - start_time; // искомое время
 	cout << search_time << " ms." << endl;
 
 	//N1 = NeedIntersections;
-	
 
 	NeedIntersections.clear();
 
@@ -341,15 +502,53 @@ int main()
 
 	NeedIntersections2.resize(ArraySize);
 
-
-	cout << "СPU" << endl;
+	cout << "GPU_v2" << std::endl;
 	unsigned int start_time2 = clock(); //начальное время
 
-	CPUCalc(R, ScopeCenter, NeedIntersections2, StepX);
+	GPUCalc_2(StepX, StepX, R, ScopeCenter, NeedIntersections2, NumberOfScope);
 
 	unsigned int end_time2 = clock(); // конечное время
 	unsigned int search_time2 = end_time2 - start_time2; // искомое время
 	cout << search_time2 << " ms." << endl;
+
+
+	NeedIntersections.clear();
+
+	vector<TwoPoints>().swap(NeedIntersections);
+
+	vector<TwoPoints> NeedIntersections3;
+
+	NeedIntersections3.resize(ArraySize);
+
+	cout << "GPU_v3" << std::endl;
+	unsigned int start_time3 = clock(); //начальное время
+
+	GPUCalc_3(StepX, StepX, R, ScopeCenter, NeedIntersections3);
+
+	unsigned int end_time3 = clock(); // конечное время
+	unsigned int search_time3 = end_time3 - start_time3; // искомое время
+	cout << search_time3 << " ms." << endl;
+
+	//N1 = NeedIntersections;
+	
+
+	NeedIntersections.clear();
+
+	vector<TwoPoints>().swap(NeedIntersections);
+
+	vector<TwoPoints> NeedIntersections4;
+
+	NeedIntersections4.resize(ArraySize);
+
+
+	cout << "СPU" << endl;
+	unsigned int start_time4 = clock(); //начальное время
+
+	CPUCalc(R, ScopeCenter, NeedIntersections4, StepX);
+
+	unsigned int end_time4 = clock(); // конечное время
+	unsigned int search_time4 = end_time4 - start_time4; // искомое время
+	cout << search_time4 << " ms." << endl;
 
 	//N2 = NeedIntersections2;
 

@@ -226,20 +226,28 @@ void GPUCalc_2(int StepX, int StepY, double R, vector<Point>& ScopeCenter, vecto
 
 void GPUCalc_3(int StepX, int StepY, double R, vector<Point>& ScopeCenter, vector<TwoPoints>& NeedIntersections)
 {
+	
 	array_view<const Point, 1 > SC(ScopeCenter.size(), ScopeCenter);
 	array_view<TwoPoints, 2> NI((StepX + 1) , (StepY + 1), NeedIntersections);
 	NI.discard_data();
 	
-	
-	parallel_for_each(SC.extent, [=](index<1> idx) restrict(amp)
+	for (int s = 0; s < ScopeCenter.size(); s++)
+	//parallel_for_each(SC.extent, [=](index<1> idx) restrict(amp)
 	{
-		for (int i = fast_math::floor(SC[idx].y - R); i < fast_math::ceil(SC[idx].y + R) + 1; i++)
-		{
-			for (int j = fast_math::floor(SC[idx].x - R); j < fast_math::ceil(SC[idx].x + R) + 1; j++)
+		int NI2y = (fast_math::ceil(SC[s].y + R) + 1);
+		int NI1y = (fast_math::floor(SC[s].y - R));
+
+		int NI2x = (fast_math::ceil(SC[s].x + R) + 1);
+		int NI1x = (fast_math::floor(SC[s].x - R));
+
+		concurrency::extent<2> e(NI2y - NI1y, NI2x - NI1x);
+		parallel_for_each(e, [=](index<2> idx) restrict(amp)
 			{
+				int j = (NI1x + idx[1]);
+				int i = (NI1y + idx[0]);
 				double A = ((-100000 * R) - (100000 * R)) * ((-100000 * R) - (100000 * R));
-				double B = 2 * (((-100000 * R) - (100000 * R)) * ((100000 * R) - SC[idx].z));
-				double C = ((j - SC[idx].x) * (j - SC[idx].x) + (i - SC[idx].y) * (i - SC[idx].y) + ((100000 * R) - SC[idx].z) * ((100000 * R) - SC[idx].z)) - (R * R);
+				double B = 2 * (((-100000 * R) - (100000 * R)) * ((100000 * R) - SC[s].z));
+				double C = ((j - SC[s].x) * (j - SC[s].x) + (i - SC[s].y) * (i - SC[s].y) + ((100000 * R) - SC[s].z) * ((100000 * R) - SC[s].z)) - (R * R);
 
 				double D = (B * B) - 4 * A * C;
 
@@ -297,10 +305,10 @@ void GPUCalc_3(int StepX, int StepY, double R, vector<Point>& ScopeCenter, vecto
 						NI[i][j].twoPointZ = z1;
 
 				}
-			}
+			//}
 
-		}
-    });
+		});
+    }
 	NI.synchronize();
 	
 	
@@ -311,9 +319,9 @@ void CPUCalc(double R, vector<Point>& ScopeCenter, vector<TwoPoints>& NeedInters
 {
 	for (int k = 0; k < ScopeCenter.size(); k++)
 	{ 
-		for (int i = floor(ScopeCenter[k].y - R); i < ceil(ScopeCenter[k].y + R) + 1; i++)
+		for (int i = 0; i < StepX; i++)
 		{
-			for (int j = floor(ScopeCenter[k].x - R); j < ceil(ScopeCenter[k].x + R) + 1; j++)
+			for (int j = 0; j < StepX; j++)
 			{
 				double A = ((-100000 * R) - (100000 * R)) * ((-100000 * R) - (100000 * R));
 				double B = 2 * (((-100000 * R) - (100000 * R)) * ((100000 * R) - ScopeCenter[k].z));

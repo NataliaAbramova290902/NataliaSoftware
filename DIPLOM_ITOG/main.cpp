@@ -191,28 +191,288 @@ void GPUCalc_3(int StepX, int StepY, double R, vector<Capsule>& ScopeCenter, vec
 			double A;
 			double B;
 			double C;
+			double D;
 
-			if (NI_New1.x < SC_One.x)//первая сфера
+			//первая сфера
 			{
 				A = (NI_New2.z - NI_New1.z) * (NI_New2.z - NI_New1.z);
 				B = 2 * ((NI_New2.z - NI_New1.z) * (NI_New1.z - SC_One.z));
 				C = ((NI_New1.x - SC_One.x) * (NI_New1.x - SC_One.x)) + ((NI_New1.y - SC_One.y) * (NI_New1.y - SC_One.y)) + ((NI_New1.z - SC_One.z) * (NI_New1.z - SC_One.z)) - (R * R);
+
+				D = (B * B) - 4 * A * C;
+
+				if (D > 0)
+				{
+					double SQ = fast_math::sqrt(D);
+					double t1 = (-B + SQ) / (2 * A);
+					double t2 = (-B - SQ) / (2 * A);
+
+					//Первая точка пересечения
+					NI_New1.z = NI_New1.z + t1 * (NI_New2.z - NI_New1.z);
+
+					//Вторая точка пересечения
+					NI_New2.z = NI_New1.z + t2 * (NI_New2.z - NI_New1.z);
+
+					//Преобразовать координаты обратно
+
+					//Первая точка
+
+					//Поворот вокруг оси OY
+					NI_New1.z = NI_New1.x * (-SinB) + NI_New1.y * 0 + NI_New1.z * CosB;
+
+					//Поворот вокруг оси OZ
+					NI_New1.z = NI_New1.x * 0 + NI_New1.y * 0 + NI_New1.z * 1;
+
+					//Перенос в новое начало координат
+					NI_New1.z = NI_New1.z - SC[s].onePoint.z;
+
+					//Вторая точка
+					//Поворот вокруг оси OY
+					NI_New2.z = NI_New2.x * (-SinB) + NI_New2.y * 0 + NI_New2.z * CosB;
+
+					//Поворот вокруг оси OZ
+					NI_New2.z = NI_New2.x * 0 + NI_New2.y * 0 + NI_New2.z * 1;
+
+					//Перенос в новое начало координат
+					NI_New2.z = NI_New2.z - SC[s].onePoint.z;
+
+					if (NI_New1.z < NI_New2.z)
+					{
+						if (NI[i][j].onePointZ > NI_New1.z)
+							NI[i][j].onePointZ = NI_New1.z;
+
+						if (NI[i][j].twoPointZ < NI_New2.z)
+							NI[i][j].twoPointZ = NI_New2.z;
+					}
+					else
+					{
+						if (NI[i][j].onePointZ > NI_New2.z)
+							NI[i][j].onePointZ = NI_New2.z;
+
+						if (NI[i][j].twoPointZ < NI_New1.z)
+							NI[i][j].twoPointZ = NI_New1.z;
+					}
+				}
+
+				else if (D == 0)
+				{
+					double SQ = fast_math::sqrt(D);
+					double t1 = (-B + SQ) / (2 * A);
+					//Первая точка пересечения
+					NI_New1.z = NI_New1.z + t1 * (NI_New2.z - NI_New1.z);
+
+					NI_New2.z = NI_New1.z + t1 * (NI_New2.z - NI_New1.z);
+
+					//Преобразовать координаты обратно
+
+					//Первая точка
+
+					//Поворот вокруг оси OY
+					NI_New1.z = NI_New1.x * (-SinB) + NI_New1.y * 0 + NI_New1.z * CosB;
+
+					//Поворот вокруг оси OZ
+					NI_New1.z = NI_New1.x * 0 + NI_New1.y * 0 + NI_New1.z * 1;
+
+					//Перенос в новое начало координат
+					NI_New1.z = NI_New1.z - SC[s].onePoint.z;
+
+					if (NI[i][j].onePointZ > NI_New1.z)
+						NI[i][j].onePointZ = NI_New1.z;
+
+					if (NI[i][j].twoPointZ < NI_New1.z)
+						NI[i][j].twoPointZ = NI_New1.z;
+				}
 			}
-			else if (NI_New1.x > SC_Two.x)
+			//Вторая сфера
 			{
 				A = (NI_New2.z - NI_New1.z) * (NI_New2.z - NI_New1.z);
 				B = 2 * ((NI_New2.z - NI_New1.z) * (NI_New1.z - SC_Two.z));
 				C = ((NI_New1.x - SC_Two.x) * (NI_New1.x - SC_Two.x)) + ((NI_New1.y - SC_Two.y) * (NI_New1.y - SC_Two.y)) + ((NI_New1.z - SC_Two.z) * (NI_New1.z - SC_Two.z)) - (R * R);
+
+				D = (B * B) - 4 * A * C;
+
+				if (D > 0)
+				{
+					double SQ = fast_math::sqrt(D);
+					double t1 = (-B + SQ) / (2 * A);
+					double t2 = (-B - SQ) / (2 * A);
+
+					//Первая точка пересечения
+					NI_New1.z = NI_New1.z + t1 * (NI_New2.z - NI_New1.z);
+
+					//Вторая точка пересечения
+					NI_New2.z = NI_New1.z + t2 * (NI_New2.z - NI_New1.z);
+
+					//Преобразовать координаты обратно
+
+					//Первая точка
+
+					//Поворот вокруг оси OY
+					NI_New1.z = NI_New1.x * (-SinB) + NI_New1.y * 0 + NI_New1.z * CosB;
+
+					//Поворот вокруг оси OZ
+					NI_New1.z = NI_New1.x * 0 + NI_New1.y * 0 + NI_New1.z * 1;
+
+					//Перенос в новое начало координат
+					NI_New1.z = NI_New1.z - SC[s].onePoint.z;
+
+					//Вторая точка
+					//Поворот вокруг оси OY
+					NI_New2.z = NI_New2.x * (-SinB) + NI_New2.y * 0 + NI_New2.z * CosB;
+
+					//Поворот вокруг оси OZ
+					NI_New2.z = NI_New2.x * 0 + NI_New2.y * 0 + NI_New2.z * 1;
+
+					//Перенос в новое начало координат
+					NI_New2.z = NI_New2.z - SC[s].onePoint.z;
+
+					if (NI_New1.z < NI_New2.z)
+					{
+						if (NI[i][j].onePointZ > NI_New1.z)
+							NI[i][j].onePointZ = NI_New1.z;
+
+						if (NI[i][j].twoPointZ < NI_New2.z)
+							NI[i][j].twoPointZ = NI_New2.z;
+					}
+					else
+					{
+						if (NI[i][j].onePointZ > NI_New2.z)
+							NI[i][j].onePointZ = NI_New2.z;
+
+						if (NI[i][j].twoPointZ < NI_New1.z)
+							NI[i][j].twoPointZ = NI_New1.z;
+					}
+				}
+
+				else if (D == 0)
+				{
+					double SQ = fast_math::sqrt(D);
+					double t1 = (-B + SQ) / (2 * A);
+					//Первая точка пересечения
+					NI_New1.z = NI_New1.z + t1 * (NI_New2.z - NI_New1.z);
+
+					NI_New2.z = NI_New1.z + t1 * (NI_New2.z - NI_New1.z);
+
+					//Преобразовать координаты обратно
+
+					//Первая точка
+
+					//Поворот вокруг оси OY
+					NI_New1.z = NI_New1.x * (-SinB) + NI_New1.y * 0 + NI_New1.z * CosB;
+
+					//Поворот вокруг оси OZ
+					NI_New1.z = NI_New1.x * 0 + NI_New1.y * 0 + NI_New1.z * 1;
+
+					//Перенос в новое начало координат
+					NI_New1.z = NI_New1.z - SC[s].onePoint.z;
+
+					if (NI[i][j].onePointZ > NI_New1.z)
+						NI[i][j].onePointZ = NI_New1.z;
+
+					if (NI[i][j].twoPointZ < NI_New1.z)
+						NI[i][j].twoPointZ = NI_New1.z;
+				}
 			}
 
-			else
+			//Цилиндр
 			{
 				A = (NI_New2.z - NI_New1.z) * (NI_New2.z - NI_New1.z);
 				B = 2 * ((NI_New2.z - NI_New1.z) * (NI_New1.z - SC_One.z));
 				C = ((NI_New1.y - SC_One.y) * (NI_New1.y - SC_One.y)) + ((NI_New1.z - SC_One.z) * (NI_New1.z - SC_One.z)) - (R * R);
+
+				D = (B * B) - 4 * A * C;
+
+				if (D > 0)
+				{
+					double SQ = fast_math::sqrt(D);
+					double t1 = (-B + SQ) / (2 * A);
+					double t2 = (-B - SQ) / (2 * A);
+
+					//Первая точка пересечения
+					NI_New1.z = NI_New1.z + t1 * (NI_New2.z - NI_New1.z);
+
+
+					//Вторая точка пересечения
+					NI_New2.z = NI_New1.z + t2 * (NI_New2.z - NI_New1.z);
+
+					if (NI_New1.x >= SC_One.x && NI_New1.x <= SC_Two.x)
+					{
+						//Преобразовать координаты обратно
+
+						//Первая точка
+
+						//Поворот вокруг оси OY
+						NI_New1.z = NI_New1.x * (-SinB) + NI_New1.y * 0 + NI_New1.z * CosB;
+
+						//Поворот вокруг оси OZ
+						NI_New1.z = NI_New1.x * 0 + NI_New1.y * 0 + NI_New1.z * 1;
+
+						//Перенос в новое начало координат
+						NI_New1.z = NI_New1.z - SC[s].onePoint.z;
+					}
+
+					if (NI_New2.x >= SC_One.x && NI_New2.x <= SC_Two.x)
+					{
+						//Вторая точка
+						//Поворот вокруг оси OY
+						NI_New2.z = NI_New2.x * (-SinB) + NI_New2.y * 0 + NI_New2.z * CosB;
+
+						//Поворот вокруг оси OZ
+						NI_New2.z = NI_New2.x * 0 + NI_New2.y * 0 + NI_New2.z * 1;
+
+						//Перенос в новое начало координат
+						NI_New2.z = NI_New2.z - SC[s].onePoint.z;
+					}
+
+					if (NI_New1.z < NI_New2.z)
+					{
+						if (NI[i][j].onePointZ > NI_New1.z)
+							NI[i][j].onePointZ = NI_New1.z;
+
+						if (NI[i][j].twoPointZ < NI_New2.z)
+							NI[i][j].twoPointZ = NI_New2.z;
+					}
+					else
+					{
+						if (NI[i][j].onePointZ > NI_New2.z)
+							NI[i][j].onePointZ = NI_New2.z;
+
+						if (NI[i][j].twoPointZ < NI_New1.z)
+							NI[i][j].twoPointZ = NI_New1.z;
+					}
+				}
+
+				else if (D == 0)
+				{
+					double SQ = fast_math::sqrt(D);
+					double t1 = (-B + SQ) / (2 * A);
+					//Первая точка пересечения
+					NI_New1.z = NI_New1.z + t1 * (NI_New2.z - NI_New1.z);
+
+					NI_New2.z = NI_New1.z + t1 * (NI_New2.z - NI_New1.z);
+
+					//Преобразовать координаты обратно
+
+					//Первая точка
+
+					//Поворот вокруг оси OY
+					NI_New1.z = NI_New1.x * (-SinB) + NI_New1.y * 0 + NI_New1.z * CosB;
+
+					//Поворот вокруг оси OZ
+					NI_New1.z = NI_New1.x * 0 + NI_New1.y * 0 + NI_New1.z * 1;
+
+					//Перенос в новое начало координат
+					NI_New1.z = NI_New1.z - SC[s].onePoint.z;
+
+					if (NI[i][j].onePointZ > NI_New1.z)
+						NI[i][j].onePointZ = NI_New1.z;
+
+					if (NI[i][j].twoPointZ < NI_New1.z)
+						NI[i][j].twoPointZ = NI_New1.z;
+				}
 			}
 
-			double D = (B * B) - 4 * A * C;
+			D = (B * B) - 4 * A * C;
 
 			if (D > 0)
 			{

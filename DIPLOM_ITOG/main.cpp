@@ -42,10 +42,9 @@ using namespace std;
 
 struct Point 
 {
-	double x = 0;
-	double y = 0;
-	double z = 0;
-	//bool valide = true;   //TODO: Флаг валидности точки, типа в теории мы все равно должны создать экземпляр - прототип точки, чтоб отроботал расчет
+	double x = 0.0;
+	double y = 0.0;
+	double z = 0.0;
 };
 
 //TODO: Структура для храенения точек пересечения, типа их не может быть больше двух
@@ -65,7 +64,6 @@ struct Line
 //Структура для хранения точек капсул
 struct Capsule
 {
-	static double radius;
 	Point onePoint;
 	Point twoPoint;
 	
@@ -77,7 +75,6 @@ void GPUCalc_3(int StepX, int StepY, double R, vector<Capsule>& ScopeCenter, vec
 	
 	array_view<const Capsule, 1 > SC(ScopeCenter.size(), ScopeCenter);
 	array_view<TwoPoints, 2> NI((StepX + 1) , (StepY + 1), NeedIntersections);
-	NI.discard_data();
 	
 	for (int s = 0; s < ScopeCenter.size(); s++)
 	{
@@ -86,15 +83,35 @@ void GPUCalc_3(int StepX, int StepY, double R, vector<Capsule>& ScopeCenter, vec
 
 		//Вектор который станет осью OX
 		Point Vector;
-		Vector.x = SC[s].onePoint.x - SC[s].twoPoint.x;
-		Vector.y = SC[s].onePoint.y - SC[s].twoPoint.y;
-		Vector.z = SC[s].onePoint.z - SC[s].twoPoint.z;
+		Vector.x = SC[s].twoPoint.x - SC[s].onePoint.x;
+		Vector.y = SC[s].twoPoint.y - SC[s].onePoint.y;
+		Vector.z = SC[s].twoPoint.z - SC[s].onePoint.z;
 
+		double SQ_Vector = abs(sqrt((Vector.y * Vector.y) + (Vector.x * Vector.x) + (Vector.z * Vector.z)));
+
+		Point Vector_n;
+		Vector_n.x = Vector.x / SQ_Vector;
+		Vector_n.y = Vector.y / SQ_Vector;
+		Vector_n.z = Vector.z / SQ_Vector;
 		//Находим углы поворота
-		double SinA = Vector.y / (sqrt((Vector.y * Vector.y) + (Vector.x * Vector.x)));
-		double CosA = Vector.x / (sqrt((Vector.y * Vector.y) + (Vector.x * Vector.x)));
-		double SinB = Vector.z;
-		double CosB = sqrt((Vector.y * Vector.y) + (Vector.x * Vector.x));
+		double SQ_Vector_n = abs(sqrt((Vector_n.y * Vector_n.y) + (Vector_n.x * Vector_n.x)));
+
+		double SinA;
+		double CosA;
+
+		if (SQ_Vector_n == 0)
+		{
+			SinA = 0;
+			CosA = 0;
+		}
+		else
+		{
+			SinA = Vector_n.y / SQ_Vector_n;
+			CosA = Vector_n.x / SQ_Vector_n;
+		}
+		
+		double SinB = Vector_n.z;
+		double CosB = SQ_Vector_n;
 
 		//Новые точки капсулы
 		Point SC_One;
@@ -136,6 +153,7 @@ void GPUCalc_3(int StepX, int StepY, double R, vector<Capsule>& ScopeCenter, vec
 			NI1x = (fast_math::floor(SC[s].twoPoint.x - R));
 		}
 
+
 		//Для каждого декселя входящего в квадрат
 		concurrency::extent<2> e(NI2y - NI1y, NI2x - NI1x);
 		parallel_for_each(e, [=](index<2> idx) restrict(amp)
@@ -144,60 +162,68 @@ void GPUCalc_3(int StepX, int StepY, double R, vector<Capsule>& ScopeCenter, vec
 			int j = (NI1x + idx[1]); 
 			int i = (NI1y + idx[0]);
 
-			Point NI_New1;
-			NI_New1.x = j;
-			NI_New1.y = i;
-			NI_New1.z = -100000 * R;
+			//Point NI_New1;
+			double NI_New1_x = static_cast<double> (j);
+			double NI_New1_y = static_cast<double> (i);
+			double NI_New1_z = -100000 * R;
 
-			Point NI_New2;
-			NI_New2.x = j;
-			NI_New2.y = i;
-			NI_New2.z = 100000 * R;
+			//Point NI_New2;
+			double NI_New2_x = static_cast<double> (j);
+			double NI_New2_y = static_cast<double> (i);
+			double NI_New2_z = 100000 * R;
 
 			//Координаты после пересноса системы
 			//Первая точка
 			
 			//Перенос в новое начало координат
-			NI_New1.x = NI_New1.x + SC[s].onePoint.x;
-			NI_New1.y = NI_New1.y + SC[s].onePoint.y;
-			NI_New1.z = NI_New1.z + SC[s].onePoint.z;
+			NI_New1_x = NI_New1_x - SC[s].onePoint.x;
+			NI_New1_y = NI_New1_y - SC[s].onePoint.y;
+			NI_New1_z = NI_New1_z - SC[s].onePoint.z;
 
 			//Поворот вокруг оси OZ
-			NI_New1.x = NI_New1.x * CosA + NI_New1.y * (-SinA) + NI_New1.z * 0;
-			NI_New1.y = NI_New1.x * SinA + NI_New1.y * CosA + NI_New1.z * 0;
-			NI_New1.z = NI_New1.x * 0 + NI_New1.y * 0 + NI_New1.z * 1;
+			NI_New1_x = (NI_New1_x * CosA) + (NI_New1_y * (-SinA)) + (NI_New1_z * 0);
+			NI_New1_y = (NI_New1_x * SinA) + (NI_New1_y * CosA) + (NI_New1_z * 0);
+			NI_New1_z = (NI_New1_x * 0) + (NI_New1_y * 0) + (NI_New1_z * 1);
 
 			//Поворот вокруг оси OY
-			NI_New1.x = NI_New1.x * CosB + NI_New1.y * 0 + NI_New1.z * (-SinB);
-			NI_New1.y = NI_New1.x * 0 + NI_New1.y * 1 + NI_New1.z * 0;
-			NI_New1.z = NI_New1.x * SinB + NI_New1.y * 0 + NI_New1.z * CosB;
+			NI_New1_x = (NI_New1_x * CosB) + (NI_New1_y * 0) + (NI_New1_z * (-SinB));
+			NI_New1_y = (NI_New1_x * 0) + (NI_New1_y * 1) + (NI_New1_z * 0);
+			NI_New1_z = (NI_New1_x * SinB) + (NI_New1_y * 0) + (NI_New1_z * CosB);
 
 			//Вторая точка
 			//Перенос в новое начало координат
-			NI_New2.x = NI_New2.x + SC[s].onePoint.x;
-			NI_New2.y = NI_New2.y + SC[s].onePoint.y;
-			NI_New2.z = NI_New2.z + SC[s].onePoint.z;
+			NI_New2_x = NI_New2_x - SC[s].onePoint.x;
+			NI_New2_y = NI_New2_y - SC[s].onePoint.y;
+			NI_New2_z = NI_New2_z - SC[s].onePoint.z;
 
 			//Поворот вокруг оси OZ
-			NI_New2.x = NI_New2.x * CosA + NI_New2.y * (-SinA) + NI_New2.z * 0;
-			NI_New2.y = NI_New2.x * SinA + NI_New2.y * CosA + NI_New2.z * 0;
-			NI_New2.z = NI_New2.x * 0 + NI_New2.y * 0 + NI_New2.z * 1;
+			NI_New2_x = (NI_New2_x * CosA) + (NI_New2_y * (-SinA)) + (NI_New2_z * 0);
+			NI_New2_y = (NI_New2_x * SinA) + (NI_New2_y * CosA) + (NI_New2_z * 0);
+			NI_New2_z = (NI_New2_x * 0) + (NI_New2_y * 0) + (NI_New2_z * 1);
 
 			//Поворот вокруг оси OY
-			NI_New2.x = NI_New2.x * CosB + NI_New2.y * 0 + NI_New2.z * (-SinB);
-			NI_New2.y = NI_New2.x * 0 + NI_New2.y * 1 + NI_New2.z * 0;
-			NI_New2.z = NI_New2.x * SinB + NI_New2.y * 0 + NI_New2.z * CosB;
+			NI_New2_x = (NI_New2_x * CosB) + (NI_New2_y * 0) + (NI_New2_z * (-SinB));
+			NI_New2_y = (NI_New2_x * 0) + (NI_New2_y * 1) + (NI_New2_z * 0);
+			NI_New2_z = (NI_New2_x * SinB) + (NI_New2_y * 0) + (NI_New2_z * CosB);
 				
 			double A;
 			double B;
 			double C;
 			double D;
 
+			double NI_New1_x_n;
+			double NI_New2_x_n;
+			double NI_New1_y_n;
+			double NI_New2_y_n;
+			double NI_New1_z_n;
+			double NI_New2_z_n;
+
+
 			//первая сфера
-			{
-				A = (NI_New2.z - NI_New1.z) * (NI_New2.z - NI_New1.z);
-				B = 2 * ((NI_New2.z - NI_New1.z) * (NI_New1.z - SC_One.z));
-				C = ((NI_New1.x - SC_One.x) * (NI_New1.x - SC_One.x)) + ((NI_New1.y - SC_One.y) * (NI_New1.y - SC_One.y)) + ((NI_New1.z - SC_One.z) * (NI_New1.z - SC_One.z)) - (R * R);
+			 {
+				A = ((NI_New2_x - NI_New1_x) * (NI_New2_x - NI_New1_x)) + ((NI_New2_y - NI_New1_y)*(NI_New2_y - NI_New1_y)) + ((NI_New2_z - NI_New1_z) * (NI_New2_z - NI_New1_z));
+				B = 2 * (((NI_New2_x - NI_New1_x) * (NI_New1_x - SC_One.x)) + ((NI_New2_y - NI_New1_y) * (NI_New1_y - SC_One.y)) + ((NI_New2_z - NI_New1_z) * (NI_New1_z - SC_One.z)));
+				C = ((NI_New1_x - SC_One.x) * (NI_New1_x - SC_One.x)) + ((NI_New1_y - SC_One.y) * (NI_New1_y - SC_One.y)) + ((NI_New1_z - SC_One.z) * (NI_New1_z - SC_One.z)) - (R * R);
 
 				D = (B * B) - 4 * A * C;
 
@@ -208,49 +234,53 @@ void GPUCalc_3(int StepX, int StepY, double R, vector<Capsule>& ScopeCenter, vec
 					double t2 = (-B - SQ) / (2 * A);
 
 					//Первая точка пересечения
-					NI_New1.z = NI_New1.z + t1 * (NI_New2.z - NI_New1.z);
+					NI_New1_x_n = NI_New1_x + t1 * (NI_New2_x - NI_New1_x);
+					NI_New1_y_n = NI_New1_y + t1 * (NI_New2_y - NI_New1_y);
+					NI_New1_z_n = NI_New1_z + t1 * (NI_New2_z - NI_New1_z);
 
 					//Вторая точка пересечения
-					NI_New2.z = NI_New1.z + t2 * (NI_New2.z - NI_New1.z);
+					NI_New2_x_n = NI_New1_x + t2 * (NI_New2_x - NI_New1_x);
+					NI_New2_y_n = NI_New1_y + t2 * (NI_New2_y - NI_New1_y);
+					NI_New2_z_n = NI_New1_z + t2 * (NI_New2_z - NI_New1_z);
 
 					//Преобразовать координаты обратно
 
 					//Первая точка
 
 					//Поворот вокруг оси OY
-					NI_New1.z = NI_New1.x * (-SinB) + NI_New1.y * 0 + NI_New1.z * CosB;
+					NI_New1_z_n = (NI_New1_x_n * (-SinB)) + (NI_New1_y_n * 0) + (NI_New1_z_n * CosB);
 
 					//Поворот вокруг оси OZ
-					NI_New1.z = NI_New1.x * 0 + NI_New1.y * 0 + NI_New1.z * 1;
+					NI_New1_z_n = (NI_New1_x_n * 0) + (NI_New1_y_n * 0) + (NI_New1_z_n * 1);
 
 					//Перенос в новое начало координат
-					NI_New1.z = NI_New1.z - SC[s].onePoint.z;
+					NI_New1_z_n = NI_New1_z_n + SC[s].onePoint.z;
 
 					//Вторая точка
 					//Поворот вокруг оси OY
-					NI_New2.z = NI_New2.x * (-SinB) + NI_New2.y * 0 + NI_New2.z * CosB;
+					NI_New2_z_n = (NI_New2_x_n * (-SinB)) + (NI_New2_y_n * 0) + (NI_New2_z_n * CosB);
 
 					//Поворот вокруг оси OZ
-					NI_New2.z = NI_New2.x * 0 + NI_New2.y * 0 + NI_New2.z * 1;
+					NI_New2_z_n = (NI_New2_x_n * 0) + (NI_New2_y_n * 0) + (NI_New2_z_n * 1);
 
 					//Перенос в новое начало координат
-					NI_New2.z = NI_New2.z - SC[s].onePoint.z;
+					NI_New2_z_n = NI_New2_z_n + SC[s].onePoint.z;
 
-					if (NI_New1.z < NI_New2.z)
+					if (NI_New1_z_n < NI_New2_z_n)
 					{
-						if (NI[i][j].onePointZ > NI_New1.z)
-							NI[i][j].onePointZ = NI_New1.z;
+						if (NI[i][j].onePointZ > NI_New1_z_n)
+							NI[i][j].onePointZ = NI_New1_z_n;
 
-						if (NI[i][j].twoPointZ < NI_New2.z)
-							NI[i][j].twoPointZ = NI_New2.z;
+						if (NI[i][j].twoPointZ < NI_New2_z_n)
+							NI[i][j].twoPointZ = NI_New2_z_n;
 					}
 					else
 					{
-						if (NI[i][j].onePointZ > NI_New2.z)
-							NI[i][j].onePointZ = NI_New2.z;
+						if (NI[i][j].onePointZ > NI_New2_z_n)
+							NI[i][j].onePointZ = NI_New2_z_n;
 
-						if (NI[i][j].twoPointZ < NI_New1.z)
-							NI[i][j].twoPointZ = NI_New1.z;
+						if (NI[i][j].twoPointZ < NI_New1_z_n)
+							NI[i][j].twoPointZ = NI_New1_z_n;
 					}
 				}
 
@@ -259,35 +289,41 @@ void GPUCalc_3(int StepX, int StepY, double R, vector<Capsule>& ScopeCenter, vec
 					double SQ = fast_math::sqrt(D);
 					double t1 = (-B + SQ) / (2 * A);
 					//Первая точка пересечения
-					NI_New1.z = NI_New1.z + t1 * (NI_New2.z - NI_New1.z);
+					NI_New1_x_n = NI_New1_x + t1 * (NI_New2_x - NI_New1_x);
+					NI_New1_y_n = NI_New1_y + t1 * (NI_New2_y - NI_New1_y);
+					NI_New1_z_n = NI_New1_z + t1 * (NI_New2_z - NI_New1_z);
 
-					NI_New2.z = NI_New1.z + t1 * (NI_New2.z - NI_New1.z);
+					//Вторая точка пересечения
+					NI_New2_x_n = NI_New1_x_n;
+					NI_New2_y_n = NI_New1_y_n;
+					NI_New2_z_n = NI_New1_z_n;
+
 
 					//Преобразовать координаты обратно
 
 					//Первая точка
 
 					//Поворот вокруг оси OY
-					NI_New1.z = NI_New1.x * (-SinB) + NI_New1.y * 0 + NI_New1.z * CosB;
+					NI_New1_z_n = (NI_New1_x_n * (-SinB)) + (NI_New1_y_n * 0) + (NI_New1_z_n * CosB);
 
 					//Поворот вокруг оси OZ
-					NI_New1.z = NI_New1.x * 0 + NI_New1.y * 0 + NI_New1.z * 1;
+					NI_New1_z_n = (NI_New1_x_n * 0) + (NI_New1_y_n * 0) + (NI_New1_z_n * 1);
 
 					//Перенос в новое начало координат
-					NI_New1.z = NI_New1.z - SC[s].onePoint.z;
+					NI_New1_z_n = NI_New1_z_n + SC[s].onePoint.z;
 
-					if (NI[i][j].onePointZ > NI_New1.z)
-						NI[i][j].onePointZ = NI_New1.z;
+					if (NI[i][j].onePointZ > NI_New1_z_n)
+						NI[i][j].onePointZ = NI_New1_z_n;
 
-					if (NI[i][j].twoPointZ < NI_New1.z)
-						NI[i][j].twoPointZ = NI_New1.z;
+					if (NI[i][j].twoPointZ < NI_New1_z_n)
+						NI[i][j].twoPointZ = NI_New1_z_n;
 				}
 			}
 			//Вторая сфера
-			{
-				A = (NI_New2.z - NI_New1.z) * (NI_New2.z - NI_New1.z);
-				B = 2 * ((NI_New2.z - NI_New1.z) * (NI_New1.z - SC_Two.z));
-				C = ((NI_New1.x - SC_Two.x) * (NI_New1.x - SC_Two.x)) + ((NI_New1.y - SC_Two.y) * (NI_New1.y - SC_Two.y)) + ((NI_New1.z - SC_Two.z) * (NI_New1.z - SC_Two.z)) - (R * R);
+			 {
+				A = ((NI_New2_x - NI_New1_x) * (NI_New2_x - NI_New1_x)) + ((NI_New2_y - NI_New1_y) * (NI_New2_y - NI_New1_y)) + ((NI_New2_z - NI_New1_z) * (NI_New2_z - NI_New1_z));
+				B = 2 * (((NI_New2_x - NI_New1_x) * (NI_New1_x - SC_Two.x)) + ((NI_New2_y - NI_New1_y) * (NI_New1_y - SC_Two.y)) + ((NI_New2_z - NI_New1_z) * (NI_New1_z - SC_Two.z)));
+				C = ((NI_New1_x - SC_Two.x) * (NI_New1_x - SC_Two.x)) + ((NI_New1_y - SC_Two.y) * (NI_New1_y - SC_Two.y)) + ((NI_New1_z - SC_Two.z) * (NI_New1_z - SC_Two.z)) - (R * R);
 
 				D = (B * B) - 4 * A * C;
 
@@ -298,49 +334,53 @@ void GPUCalc_3(int StepX, int StepY, double R, vector<Capsule>& ScopeCenter, vec
 					double t2 = (-B - SQ) / (2 * A);
 
 					//Первая точка пересечения
-					NI_New1.z = NI_New1.z + t1 * (NI_New2.z - NI_New1.z);
+					NI_New1_x_n = NI_New1_x + t1 * (NI_New2_x - NI_New1_x);
+					NI_New1_y_n = NI_New1_y + t1 * (NI_New2_y - NI_New1_y);
+					NI_New1_z_n = NI_New1_z + t1 * (NI_New2_z - NI_New1_z);
 
 					//Вторая точка пересечения
-					NI_New2.z = NI_New1.z + t2 * (NI_New2.z - NI_New1.z);
+					NI_New2_x_n = NI_New1_x + t2 * (NI_New2_x - NI_New1_x);
+					NI_New2_y_n = NI_New1_y + t2 * (NI_New2_y - NI_New1_y);
+					NI_New2_z_n = NI_New1_z + t2 * (NI_New2_z - NI_New1_z);
 
 					//Преобразовать координаты обратно
 
 					//Первая точка
 
 					//Поворот вокруг оси OY
-					NI_New1.z = NI_New1.x * (-SinB) + NI_New1.y * 0 + NI_New1.z * CosB;
+					NI_New1_z_n = (NI_New1_x_n * (-SinB)) + (NI_New1_y_n * 0) + (NI_New1_z_n * CosB);
 
 					//Поворот вокруг оси OZ
-					NI_New1.z = NI_New1.x * 0 + NI_New1.y * 0 + NI_New1.z * 1;
+					NI_New1_z_n = (NI_New1_x_n * 0) + (NI_New1_y_n * 0) + (NI_New1_z_n * 1);
 
 					//Перенос в новое начало координат
-					NI_New1.z = NI_New1.z - SC[s].onePoint.z;
+					NI_New1_z_n = NI_New1_z_n + SC[s].onePoint.z;
 
 					//Вторая точка
 					//Поворот вокруг оси OY
-					NI_New2.z = NI_New2.x * (-SinB) + NI_New2.y * 0 + NI_New2.z * CosB;
+					NI_New2_z_n = (NI_New2_x_n * (-SinB)) + (NI_New2_y_n * 0) + (NI_New2_z_n * CosB);
 
 					//Поворот вокруг оси OZ
-					NI_New2.z = NI_New2.x * 0 + NI_New2.y * 0 + NI_New2.z * 1;
+					NI_New2_z_n = (NI_New2_x_n * 0) + (NI_New2_y_n * 0) + (NI_New2_z_n * 1);
 
 					//Перенос в новое начало координат
-					NI_New2.z = NI_New2.z - SC[s].onePoint.z;
+					NI_New2_z_n = NI_New2_z_n + SC[s].onePoint.z;
 
-					if (NI_New1.z < NI_New2.z)
+					if (NI_New1_z_n < NI_New2_z_n)
 					{
-						if (NI[i][j].onePointZ > NI_New1.z)
-							NI[i][j].onePointZ = NI_New1.z;
+						if (NI[i][j].onePointZ > NI_New1_z_n)
+							NI[i][j].onePointZ = NI_New1_z_n;
 
-						if (NI[i][j].twoPointZ < NI_New2.z)
-							NI[i][j].twoPointZ = NI_New2.z;
+						if (NI[i][j].twoPointZ < NI_New2_z_n)
+							NI[i][j].twoPointZ = NI_New2_z_n;
 					}
 					else
 					{
-						if (NI[i][j].onePointZ > NI_New2.z)
-							NI[i][j].onePointZ = NI_New2.z;
+						if (NI[i][j].onePointZ > NI_New2_z_n)
+							NI[i][j].onePointZ = NI_New2_z_n;
 
-						if (NI[i][j].twoPointZ < NI_New1.z)
-							NI[i][j].twoPointZ = NI_New1.z;
+						if (NI[i][j].twoPointZ < NI_New1_z_n)
+							NI[i][j].twoPointZ = NI_New1_z_n;
 					}
 				}
 
@@ -348,37 +388,39 @@ void GPUCalc_3(int StepX, int StepY, double R, vector<Capsule>& ScopeCenter, vec
 				{
 					double SQ = fast_math::sqrt(D);
 					double t1 = (-B + SQ) / (2 * A);
-					//Первая точка пересечения
-					NI_New1.z = NI_New1.z + t1 * (NI_New2.z - NI_New1.z);
 
-					NI_New2.z = NI_New1.z + t1 * (NI_New2.z - NI_New1.z);
+					//Первая точка пересечения
+					NI_New1_x_n = NI_New1_x + t1 * (NI_New2_x - NI_New1_x);
+					NI_New1_y_n = NI_New1_y + t1 * (NI_New2_y - NI_New1_y);
+					NI_New1_z_n = NI_New1_z + t1 * (NI_New2_z - NI_New1_z);
+
 
 					//Преобразовать координаты обратно
 
 					//Первая точка
 
 					//Поворот вокруг оси OY
-					NI_New1.z = NI_New1.x * (-SinB) + NI_New1.y * 0 + NI_New1.z * CosB;
+					NI_New1_z_n = (NI_New1_x_n * (-SinB)) + (NI_New1_y_n * 0) + (NI_New1_z_n * CosB);
 
 					//Поворот вокруг оси OZ
-					NI_New1.z = NI_New1.x * 0 + NI_New1.y * 0 + NI_New1.z * 1;
+					NI_New1_z_n = (NI_New1_x_n * 0) + (NI_New1_y_n * 0) + (NI_New1_z_n * 1);
 
 					//Перенос в новое начало координат
-					NI_New1.z = NI_New1.z - SC[s].onePoint.z;
+					NI_New1_z_n = NI_New1_z_n + SC[s].onePoint.z;
 
-					if (NI[i][j].onePointZ > NI_New1.z)
-						NI[i][j].onePointZ = NI_New1.z;
+					if (NI[i][j].onePointZ > NI_New1_z_n)
+						NI[i][j].onePointZ = NI_New1_z_n;
 
-					if (NI[i][j].twoPointZ < NI_New1.z)
-						NI[i][j].twoPointZ = NI_New1.z;
+					if (NI[i][j].twoPointZ < NI_New1_z_n)
+						NI[i][j].twoPointZ = NI_New1_z_n;
 				}
 			}
 
 			//Цилиндр
-			{
-				A = (NI_New2.z - NI_New1.z) * (NI_New2.z - NI_New1.z);
-				B = 2 * ((NI_New2.z - NI_New1.z) * (NI_New1.z - SC_One.z));
-				C = ((NI_New1.y - SC_One.y) * (NI_New1.y - SC_One.y)) + ((NI_New1.z - SC_One.z) * (NI_New1.z - SC_One.z)) - (R * R);
+			  {
+				A = ((NI_New2_y - NI_New1_y) * (NI_New2_y - NI_New1_y)) + ((NI_New2_z - NI_New1_z) * (NI_New2_z - NI_New1_z));
+				B = 2 * (((NI_New2_y - NI_New1_y) * (NI_New1_y - SC_One.y)) + ((NI_New2_z - NI_New1_z) * (NI_New1_z - SC_One.z)));
+				C = ((NI_New1_y - SC_One.y) * (NI_New1_y - SC_One.y)) + ((NI_New1_z - SC_One.z) * (NI_New1_z - SC_One.z)) - (R * R);
 
 				D = (B * B) - 4 * A * C;
 
@@ -389,56 +431,95 @@ void GPUCalc_3(int StepX, int StepY, double R, vector<Capsule>& ScopeCenter, vec
 					double t2 = (-B - SQ) / (2 * A);
 
 					//Первая точка пересечения
-					NI_New1.z = NI_New1.z + t1 * (NI_New2.z - NI_New1.z);
-
+					NI_New1_x_n = NI_New1_x + t1 * (NI_New2_x - NI_New1_x);
+					NI_New1_y_n = NI_New1_y + t1 * (NI_New2_y - NI_New1_y);
+					NI_New1_z_n = NI_New1_z + t1 * (NI_New2_z - NI_New1_z);
 
 					//Вторая точка пересечения
-					NI_New2.z = NI_New1.z + t2 * (NI_New2.z - NI_New1.z);
+					NI_New2_x_n = NI_New1_x + t2 * (NI_New2_x - NI_New1_x);
+					NI_New2_y_n = NI_New1_y + t2 * (NI_New2_y - NI_New1_y);
+					NI_New2_z_n = NI_New1_z + t2 * (NI_New2_z - NI_New1_z);
 
-					if (NI_New1.x >= SC_One.x && NI_New1.x <= SC_Two.x)
+
+					//Исключение точек вышедших за длинну
+					int index_c = 0; // Определяем какая точка не вашла: 0 - все точки пересекают цилиндр, 1 - первая не попала, 2 - втарая не попала, 3 - обе не попали
+
+					if (NI_New1_x_n < SC_One.x || NI_New1_x_n > SC_Two.x)
+					{
+						index_c = index_c + 1;
+					}
+
+					if (NI_New2_x_n < SC_One.x || NI_New2_x_n > SC_Two.x)
+					{
+						index_c = index_c + 2;
+					}
+
+					if (index_c == 0 || index_c == 2) //Если первая попала
 					{
 						//Преобразовать координаты обратно
 
 						//Первая точка
 
 						//Поворот вокруг оси OY
-						NI_New1.z = NI_New1.x * (-SinB) + NI_New1.y * 0 + NI_New1.z * CosB;
+						NI_New1_z_n = NI_New1_x_n * (-SinB) + NI_New1_y_n * 0 + NI_New1_z_n * CosB;
 
 						//Поворот вокруг оси OZ
-						NI_New1.z = NI_New1.x * 0 + NI_New1.y * 0 + NI_New1.z * 1;
+						NI_New1_z_n = NI_New1_x_n * 0 + NI_New1_y_n * 0 + NI_New1_z_n * 1;
 
 						//Перенос в новое начало координат
-						NI_New1.z = NI_New1.z - SC[s].onePoint.z;
+						NI_New1_z_n = NI_New1_z_n + SC[s].onePoint.z;
 					}
 
-					if (NI_New2.x >= SC_One.x && NI_New2.x <= SC_Two.x)
+
+					if (index_c == 0 || index_c == 1) // Если вторая попала
 					{
 						//Вторая точка
 						//Поворот вокруг оси OY
-						NI_New2.z = NI_New2.x * (-SinB) + NI_New2.y * 0 + NI_New2.z * CosB;
+						NI_New2_z_n = NI_New2_x_n * (-SinB) + NI_New2_y_n * 0 + NI_New2_z_n * CosB;
 
 						//Поворот вокруг оси OZ
-						NI_New2.z = NI_New2.x * 0 + NI_New2.y * 0 + NI_New2.z * 1;
+						NI_New2_z_n = NI_New2_x_n * 0 + NI_New2_y_n * 0 + NI_New2_z_n * 1;
 
 						//Перенос в новое начало координат
-						NI_New2.z = NI_New2.z - SC[s].onePoint.z;
+						NI_New2_z_n = NI_New2_z_n + SC[s].onePoint.z;
 					}
 
-					if (NI_New1.z < NI_New2.z)
+					if (index_c == 1) //Исключаем первую если она не попала
 					{
-						if (NI[i][j].onePointZ > NI_New1.z)
-							NI[i][j].onePointZ = NI_New1.z;
-
-						if (NI[i][j].twoPointZ < NI_New2.z)
-							NI[i][j].twoPointZ = NI_New2.z;
+						NI_New1_x_n = NI_New2_x_n;
+						NI_New1_y_n = NI_New2_y_n;
+						NI_New1_z_n = NI_New2_z_n;
 					}
-					else
+					else if (index_c == 2) // Исключаем вторую если она не попала
 					{
-						if (NI[i][j].onePointZ > NI_New2.z)
-							NI[i][j].onePointZ = NI_New2.z;
+						NI_New2_x_n = NI_New1_x_n;
+						NI_New2_y_n = NI_New1_y_n;
+						NI_New2_z_n = NI_New1_z_n;
+					}
+					else if (index_c == 3)// Исключаем обе
+					{
+						NI_New1_z_n = NI[i][j].onePointZ;
+						NI_New2_z_n = NI[i][j].twoPointZ;
+					}
 
-						if (NI[i][j].twoPointZ < NI_New1.z)
-							NI[i][j].twoPointZ = NI_New1.z;
+					if (NI_New1_z_n != 100000 * R &&  NI_New2_z_n != -100000 * R)
+					{
+						if (NI_New1_z_n < NI_New2_z_n)
+							{
+								if (NI[i][j].onePointZ > NI_New1_z_n)
+									NI[i][j].onePointZ = NI_New1_z_n;
+
+								if (NI[i][j].twoPointZ < NI_New2_z_n)
+									NI[i][j].twoPointZ = NI_New2_z_n;
+							}
+						else
+						{
+							if (NI[i][j].onePointZ > NI_New2_z_n)
+								NI[i][j].onePointZ = NI_New2_z_n;
+
+							if (NI[i][j].twoPointZ < NI_New1_z_n)
+								NI[i][j].twoPointZ = NI_New1_z_n;
+						}
 					}
 				}
 
@@ -446,115 +527,39 @@ void GPUCalc_3(int StepX, int StepY, double R, vector<Capsule>& ScopeCenter, vec
 				{
 					double SQ = fast_math::sqrt(D);
 					double t1 = (-B + SQ) / (2 * A);
+
 					//Первая точка пересечения
-					NI_New1.z = NI_New1.z + t1 * (NI_New2.z - NI_New1.z);
+					NI_New1_x_n = NI_New1_x + t1 * (NI_New2_x - NI_New1_x);
+					NI_New1_y_n = NI_New1_y + t1 * (NI_New2_y - NI_New1_y);
+					NI_New1_z_n = NI_New1_z + t1 * (NI_New2_z - NI_New1_z);
 
-					NI_New2.z = NI_New1.z + t1 * (NI_New2.z - NI_New1.z);
+					//Вторая точка пересечения
+					NI_New2_x_n = NI_New1_x_n;
+					NI_New2_y_n = NI_New1_y_n;
+					NI_New2_z_n = NI_New1_z_n;
 
-					//Преобразовать координаты обратно
+					if (NI_New1_x_n >= SC_One.x || NI_New1_x_n <= SC_Two.x)
+					{
+						//Преобразовать координаты обратно
 
-					//Первая точка
+						//Первая точка
 
-					//Поворот вокруг оси OY
-					NI_New1.z = NI_New1.x * (-SinB) + NI_New1.y * 0 + NI_New1.z * CosB;
+						//Поворот вокруг оси OY
+						NI_New1_z_n = NI_New1_x_n * (-SinB) + NI_New1_y_n * 0 + NI_New1_z_n * CosB;
 
-					//Поворот вокруг оси OZ
-					NI_New1.z = NI_New1.x * 0 + NI_New1.y * 0 + NI_New1.z * 1;
+						//Поворот вокруг оси OZ
+						NI_New1_z_n = NI_New1_x_n * 0 + NI_New1_y_n * 0 + NI_New1_z_n * 1;
 
-					//Перенос в новое начало координат
-					NI_New1.z = NI_New1.z - SC[s].onePoint.z;
+						//Перенос в новое начало координат
+						NI_New1_z_n = NI_New1_z_n + SC[s].onePoint.z;
 
-					if (NI[i][j].onePointZ > NI_New1.z)
-						NI[i][j].onePointZ = NI_New1.z;
+						if (NI[i][j].onePointZ > NI_New1_z_n)
+							NI[i][j].onePointZ = NI_New1_z_n;
 
-					if (NI[i][j].twoPointZ < NI_New1.z)
-						NI[i][j].twoPointZ = NI_New1.z;
+						if (NI[i][j].twoPointZ < NI_New1_z_n)
+							NI[i][j].twoPointZ = NI_New1_z_n;
+					}
 				}
-			}
-
-			D = (B * B) - 4 * A * C;
-
-			if (D > 0)
-			{
-				double SQ = fast_math::sqrt(D);
-				double t1 = (-B + SQ) / (2 * A);
-				double t2 = (-B - SQ) / (2 * A);
-
-				//Первая точка пересечения
-				NI_New1.z = NI_New1.z + t1 * (NI_New2.z - NI_New1.z);
-
-				//Вторая точка пересечения
-				NI_New2.z = NI_New1.z + t2 * (NI_New2.z - NI_New1.z);
-
-				//Преобразовать координаты обратно
-
-				//Первая точка
-
-				//Поворот вокруг оси OY
-				NI_New1.z = NI_New1.x * (-SinB) + NI_New1.y * 0 + NI_New1.z * CosB;
-
-				//Поворот вокруг оси OZ
-				NI_New1.z = NI_New1.x * 0 + NI_New1.y * 0 + NI_New1.z * 1;
-
-				//Перенос в новое начало координат
-				NI_New1.z = NI_New1.z - SC[s].onePoint.z;
-
-				//Вторая точка
-				//Поворот вокруг оси OY
-				NI_New2.z = NI_New2.x * (-SinB) + NI_New2.y * 0 + NI_New2.z * CosB;
-
-				//Поворот вокруг оси OZ
-				NI_New2.z = NI_New2.x * 0 + NI_New2.y * 0 + NI_New2.z * 1;
-
-				//Перенос в новое начало координат
-				NI_New2.z = NI_New2.z - SC[s].onePoint.z;
-
-				if (NI_New1.z < NI_New2.z)
-				{
-					if(NI[i][j].onePointZ > NI_New1.z)
-						NI[i][j].onePointZ = NI_New1.z;
-
-					if(NI[i][j].twoPointZ < NI_New2.z)
-						NI[i][j].twoPointZ = NI_New2.z;
-				}
-				else
-				{
-					if (NI[i][j].onePointZ > NI_New2.z)
-						NI[i][j].onePointZ = NI_New2.z;
-
-					if (NI[i][j].twoPointZ < NI_New1.z)
-						NI[i][j].twoPointZ = NI_New1.z;
-				}
-			}
-
-			else if (D == 0)
-			{
-				double SQ = fast_math::sqrt(D);
-				double t1 = (-B + SQ) / (2 * A);
-				//Первая точка пересечения
-				NI_New1.z = NI_New1.z + t1 * (NI_New2.z - NI_New1.z);
-
-				NI_New2.z = NI_New1.z + t1 * (NI_New2.z - NI_New1.z);
-
-				//Преобразовать координаты обратно
-
-				//Первая точка
-
-				//Поворот вокруг оси OY
-				NI_New1.z = NI_New1.x * (-SinB) + NI_New1.y * 0 + NI_New1.z * CosB;
-
-				//Поворот вокруг оси OZ
-				NI_New1.z = NI_New1.x * 0 + NI_New1.y * 0 + NI_New1.z * 1;
-
-				//Перенос в новое начало координат
-				NI_New1.z = NI_New1.z - SC[s].onePoint.z;
-
-				if (NI[i][j].onePointZ > NI_New1.z)
-					NI[i][j].onePointZ = NI_New1.z;
-
-				if (NI[i][j].twoPointZ < NI_New1.z)
-					NI[i][j].twoPointZ = NI_New1.z;
-
 			}
 		});
     }
@@ -609,10 +614,26 @@ Capsule generateCapsule(double minLength, double maxLength, double rightLimit)
 	}
 }
 
+void Calc_0(vector<TwoPoints>& NeedIntersections, double R )
+{
+
+	for (int i = 0; i < NeedIntersections.size(); i++)
+	{
+		if (NeedIntersections[i].onePointZ == 100000 * R)
+		{
+			NeedIntersections[i].onePointZ = 0;
+		}
+
+		if (NeedIntersections[i].twoPointZ == -100000 * R)
+		{
+			NeedIntersections[i].twoPointZ = 0;
+		}
+	}
+
+}
+
 int main()
 {
-	Capsule::radius = 20;
-	
 	setlocale(LC_CTYPE, "rus");
 	int StepX;
 	int	StepY;
@@ -647,14 +668,22 @@ int main()
 
 	vector<TwoPoints> NeedIntersections(ArraySize);
 
+	for (int i = 0; i < ArraySize; i++)
+	{
+		NeedIntersections[i].onePointZ = 100000 * R;
+		NeedIntersections[i].twoPointZ = -100000 * R;
+	}
+
 	cout << "GPU_v3" << std::endl;
 	unsigned int start_time = clock(); //начальное время
 
 	GPUCalc_3(StepX, StepX, R, ScopeCenter, NeedIntersections);
+	Calc_0(NeedIntersections, R);
 
 	unsigned int end_time = clock(); // конечное время
 	unsigned int search_time = end_time - start_time; // искомое время
 	cout << search_time << " ms." << endl;
+
 
 	NeedIntersections.clear();
 
